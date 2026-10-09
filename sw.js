@@ -10,7 +10,7 @@
  * Anmeldung (googleapis) gehen nie durch den Zwischenspeicher.
  */
 
-const SPEICHER_NAME = "kaffekasse-v0.5.1";
+const SPEICHER_NAME = "kaffekasse-v0.7.0";
 
 const BEIM_BAUEN = (self.location.hostname === "localhost" || self.location.hostname === "127.0.0.1");
 
@@ -32,6 +32,9 @@ const DATEIEN = [
     "css/upcrew-blatt.css",
     "css/upcrew-einstellungen.css",
     "css/upcrew-offline.css",
+    "css/upcrew-abzeichen.css",
+    "css/upcrew-levelpfad.css",
+    "css/upcrew-profil.css",
     "css/stil.css",
     "js/upcrew-intro.js",
     "js/upcrew-farbwelten.js",
@@ -45,6 +48,10 @@ const DATEIEN = [
     "js/upcrew-blatt.js",
     "js/upcrew-einstellungen.js",
     "js/upcrew-offline.js",
+    "js/upcrew-abzeichen.js",
+    "js/upcrew-abzeichen-spiele.js",
+    "js/upcrew-levelpfad.js",
+    "js/upcrew-profil.js",
     "js/konto.js",
     "js/speicher.js",
     "js/speicher-konten.js",
@@ -52,6 +59,7 @@ const DATEIEN = [
     "js/zustand.js",
     "js/spieler.js",
     "js/kasse.js",
+    "js/bestand.js",
     "js/warteschlange.js",
     "js/steuerung.js",
     "js/produktsuche.js",
@@ -59,8 +67,11 @@ const DATEIEN = [
     "js/navigation.js",
     "js/bildschirm-anmeldung.js",
     "js/bildschirm-kasse.js",
+    "js/profil.js",
     "js/bildschirm-start.js",
     "js/bildschirm-verlauf.js",
+    "js/bildschirm-statistik.js",
+    "js/bildschirm-produkte.js",
     "js/bildschirm-einstellungen.js",
     "js/app.js",
     "schrift/crew-S1-normal.woff2",

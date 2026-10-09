@@ -1,0 +1,196 @@
+/*
+ * upcrew-abzeichen.css — die fünf Abzeichen, gleich in Blunderluck und Typoluck (zu upcrew-abzeichen.js).
+ * Gemeinsamer Baustein: in die Apps KOPIEREN, nie abwandeln. Aussehen 1:1 Typoluck 0.12.0
+ * (css\stil-bildschirme.css: .level-abzeichen, .abzeichen, .abzeichen-punkte, .abzeichen-stufen).
+ *
+ * MARKUP (baut upcrew-abzeichen.js):
+ *   <div class="up-az-raster">
+ *     <button class="up-az up-az-an"><svg class="up-az-zeichen">…</svg>
+ *       <span class="up-az-punkte"><i class="an"></i><i></i>…<b>+2</b></span><span class="up-az-name">Partien</span>
+ *     </button> …
+ *   </div>
+ *   Blatt: <div class="up-az-blatt"><p class="up-az-wert"><strong>42</strong><span> Partien</span></p>
+ *          <div class="up-az-stufen"><span class="an">10</span>…<span class="leise">+500 …</span></div></div>
+ *
+ * Braucht die Farbwelt-Variablen (--karte-leise, --schrift, --schrift-leise, --rahmen, --haupt, --rund-klein,
+ * --rund-voll) und das Gold der Wertungs-Figuren --figur / --figur-schrift (Typoluck: #f2c14e / #1a1406, hell
+ * und dunkel gleich; fehlen sie, nimmt der Baustein die Hauptfarbe).
+ */
+
+.up-az-raster {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+}
+
+.up-az {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    min-width: 0;
+    padding: 8px 2px;
+    border: 0;
+    border-radius: var(--rund-klein, 8px);
+    background: var(--karte-leise);
+    color: var(--schrift);
+    font: inherit;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+/* Ohne erreichte Stufe bleibt ein Abzeichen blass. */
+.up-az:not(.up-az-an) {
+    opacity: 0.5;
+}
+
+.up-az-zeichen {
+    width: 20px;
+    height: 20px;
+    color: var(--haupt);
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.up-az-name {
+    max-width: 100%;
+    overflow: hidden;
+    color: var(--schrift-leise);
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.up-az-punkte {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 3px;
+    max-width: 46px;
+    min-height: 6px;
+}
+
+.up-az-punkte i {
+    width: 6px;
+    height: 6px;
+    border-radius: var(--rund-voll, 999px);
+    background: var(--rahmen);
+}
+
+.up-az-punkte i.an {
+    background: var(--figur, var(--haupt));
+}
+
+.up-az-punkte b {
+    font-size: 0.62rem;
+}
+
+.up-az-wert {
+    margin: 0 0 10px;
+}
+
+.up-az-wert strong {
+    font-size: 1.6rem;
+}
+
+.up-az-stufen {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+
+.up-az-stufen span {
+    padding: 4px 10px;
+    border-radius: var(--rund-voll, 999px);
+    background: var(--karte-leise);
+    font-size: 0.82rem;
+    font-weight: 800;
+}
+
+.up-az-stufen span.an {
+    background: var(--figur, var(--haupt));
+    color: var(--figur-schrift, var(--haupt-schrift));
+}
+
+.up-az-stufen span.leise {
+    background: none;
+    color: var(--schrift-leise);
+}
+
+/* In der Sammlung (upcrew-sammlung.css): mit dem Regal-Einzug. */
+.up-sm-teil > .up-az-raster {
+    padding: 2px 14px 8px;
+}
+
+/* ---- Eine Liste für alle Spiele (Vorschlag Blunderluck v0.156.0) ----
+   Die Marke oben rechts sagt, woher ein Abzeichen kommt (UP = über alle Spiele, sonst das Kürzel des Spiels). */
+.up-az {
+    position: relative;
+}
+
+.up-az-marke {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    min-width: 20px;
+    padding: 1px 4px;
+    border-radius: var(--rund-voll, 999px);
+    background: var(--karte);
+    color: var(--schrift-leise);
+    font-size: 0.56rem;
+    font-weight: 900;
+    line-height: 1.3;
+    letter-spacing: 0.02em;
+}
+
+.up-az-text {
+    margin: 10px 0 0;
+    font-size: 0.86rem;
+}
+
+/* ---- KOMPAKT: nur das Zeichen im Kreis (Start-Kopf, Vorschau-Karte, „Ausgerüstet“; 29.09.2026) ---- */
+.up-az-symbol {
+    width: var(--up-az-symbol, 30px);
+    height: var(--up-az-symbol, 30px);
+    flex: none;
+    display: inline-grid;
+    place-items: center;
+    padding: 0;
+    margin: 0;
+    border: 1px solid var(--rahmen);
+    border-radius: var(--rund-voll, 999px);
+    background: var(--karte-leise);
+    color: var(--schrift);
+    font: inherit;
+}
+
+button.up-az-symbol {
+    cursor: pointer;
+}
+
+.up-az-symbol .up-az-zeichen {
+    width: 60%;
+    height: 60%;
+}
+
+.up-az-symbol-leer {
+    border: 2px dashed var(--rahmen);
+    background: none;
+}
+
+.up-az-symbol:not(.up-az-an):not(.up-az-symbol-leer) {
+    opacity: 0.5;
+}
+
+.up-az-herkunft {
+    margin: 4px 0 0;
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: var(--schrift-leise);
+}

@@ -13,7 +13,7 @@
 
 const KONFIG = {
 
-    APP_VERSION: "0.5.1",
+    APP_VERSION: "0.7.0",
 
     /* Name und Nummer im Studio-Intro (die Reihe der Nummern führt das Studio). */
     APP_NAME: "Kaffekasse",
@@ -56,6 +56,9 @@ const KONFIG = {
 
     /* Wie lange ein eigener Eintrag zurückgenommen werden darf (Modell, Stufe 2). */
     ruecknahmeMinuten: 10,
+
+    /* Wie lange die Leiste „Laden · Angebot · MHD“ nach dem „+“ stehen bleibt (0.7.0). */
+    vorbelegungMs: 8000,
 
     /* Schlüssel im Gerätespeicher. Alle UPCrew-Apps liegen auf demselben Ursprung und
        teilen den Browser-Speicher — deshalb der eigene Vorsatz. Das Konto liegt unter

@@ -33,9 +33,11 @@ const APP = {
             leiste: document.getElementById("leiste"),
             band: document.getElementById("band"),
             ebenen: document.getElementById("ebenen"),
-            bildschirme: { start: START, verlauf: VERLAUF, einstellungen: EINSTELLUNGEN },
+            bildschirme: { start: START, statistik: STATISTIK, produkte: PRODUKTE },
             erlaubt: () => APP.bereit
         });
+        /* Die Einstellungen sind seit 0.6.0 ein Blatt: offen → mit der Kasse mitziehen. */
+        STEUERUNG.beobachten(() => EINSTELLUNGEN.auffrischen());
 
         if (typeof UPCREW_OFFLINE !== "undefined") {
             UPCREW_OFFLINE.lauschen();
@@ -119,7 +121,7 @@ const APP = {
             }
         }
         START.kopfAktualisieren();
-        NAVIGATION.veralten("einstellungen");
+        EINSTELLUNGEN.auffrischen();
     },
 
     eigener() {

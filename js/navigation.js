@@ -1,6 +1,7 @@
 /*
  * navigation.js — Seite oder Blatt: die Tab-Leiste unten, das Seiten-Band (Wischen) und
- * die Blätter über der Seite. Drei Tabs: Start, Verlauf, Einstellungen.
+ * die Blätter über der Seite. Drei Tabs: Statistik, Bestand, Produkte (0.7.0; seit 0.6.0, Nutzer
+ * 09.10.2026: „einstellungen als tab weg“ — die Einstellungen sind ein Blatt hinter dem Profil-Menü).
  *
  * Was in der Leiste steht, ist eine SEITE im Band (nie ein Blatt). Blätter gibt es nur für
  * Untermenüs ohne Leisten-Knopf (Anpassen, später Produkt anlegen, Rücknahme) — dahinter
@@ -18,11 +19,13 @@
 
 const NAVIGATION = {
 
-    /* Zeichen im 24er-Raster wie in zustand.js; "zahnrad" liefert der Einstellungen-Baustein. */
+    /* Zeichen im 24er-Raster wie in zustand.js. */
+    /* Seit 0.7.0: Statistik · Bestand · Produkte — der Bestand in der MITTE und beim Start
+       offen (wie das Wichtigste in den Spielen). Die Kennung bleibt "start". */
     TABS: [
-        { id: "start", name: "Start", zeichen: "tasse" },
-        { id: "verlauf", name: "Verlauf", zeichen: "liste" },
-        { id: "einstellungen", name: "Einstellungen", zeichen: "zahnrad" }
+        { id: "statistik", name: "Statistik", zeichen: "statistik" },
+        { id: "start", name: "Bestand", zeichen: "tasse" },
+        { id: "produkte", name: "Produkte", zeichen: "paket" }
     ],
 
     aktiv: "start",
@@ -34,7 +37,7 @@ const NAVIGATION = {
     bildschirme: {},
     zeigenErlaubt: () => true,
 
-    /* Einmal beim Start. `bildschirme` = { start: START, verlauf: VERLAUF, einstellungen: EINSTELLUNGEN },
+    /* Einmal beim Start. `bildschirme` = { start: START, statistik: STATISTIK, produkte: PRODUKTE },
        jeder mit `zeichnen(ort)`. */
     einrichten(optionen) {
         const o = optionen || {};
@@ -77,11 +80,7 @@ const NAVIGATION = {
             knopf.className = "up-tab";
             knopf.dataset.tab = tab.id;
             knopf.setAttribute("aria-label", tab.name);
-            if (tab.zeichen === "zahnrad" && typeof UPCREW_EINSTELLUNGEN !== "undefined") {
-                knopf.appendChild(UPCREW_EINSTELLUNGEN.zeichen("zahnrad", ""));
-            } else {
-                knopf.appendChild(ZUSTAND.zeichen(tab.zeichen, ""));
-            }
+            knopf.appendChild(ZUSTAND.zeichen(tab.zeichen, ""));
             const wort = document.createElement("span");
             wort.textContent = tab.name;
             knopf.appendChild(wort);

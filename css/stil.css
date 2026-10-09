@@ -107,13 +107,43 @@ button {
     padding: 6px 0 10px;
 }
 
+/* Der Platz des Profil-Kopfs (js\profil.js): mit Baustein die Kopfzeile der Spiele, ohne ihn
+   Name #Tag als Knopf und das Zahnrad. */
+.kopf-profil {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.kopf-profil > .up-pf-kopfzeile {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
 .kopf-name {
+    flex: 0 1 auto;
+    min-width: 0;
+    padding: 4px 0;
+    border: 0;
+    background: none;
+    color: var(--schrift);
+    font: inherit;
     font-size: 1.25rem;
     font-weight: 700;
-    min-width: 0;
+    text-align: left;
+    cursor: pointer;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.kopf-tag {
+    margin-left: 2px;
+    font-size: .8rem;
+    font-weight: 700;
+    color: var(--schrift-leise);
 }
 
 .kopf-name:empty::before {
@@ -408,10 +438,12 @@ button {
     pointer-events: none;
 }
 
+/* Der Code schlank (Nutzer 09.10.2026: „der code soll nicht so fett sein“): normale Stärke,
+   weiter Zeichenabstand, wie ein Etikett. */
 .code-gross {
-    font-size: 2.2rem;
-    font-weight: 700;
-    letter-spacing: .18em;
+    font-size: 1.6rem;
+    font-weight: 400;
+    letter-spacing: .32em;
     text-align: center;
     font-variant-numeric: tabular-nums;
     padding: 10px 0 4px;
@@ -471,10 +503,14 @@ button {
 
 .kasse-code {
     flex: none;
-    font-weight: 700;
-    letter-spacing: .12em;
+    padding: 3px 8px;
+    font-size: .74rem;
+    font-weight: 400;
+    letter-spacing: .24em;
     font-variant-numeric: tabular-nums;
     color: var(--schrift-leise);
+    border: 1px solid var(--rahmen);
+    border-radius: var(--rund-klein);
 }
 
 .produkt {
@@ -569,6 +605,20 @@ button {
     color: var(--schrift-leise);
 }
 
+.produkt-eben-packung {
+    min-width: 0;
+    min-height: 34px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    text-decoration: underline dotted;
+    text-underline-offset: 3px;
+    cursor: pointer;
+}
+
 .produkt-zurueck {
     min-height: 34px;
     font-size: .82rem;
@@ -580,6 +630,137 @@ button {
     display: flex;
     justify-content: center;
     padding: 4px 0 8px;
+}
+
+/* ---------- Bestand (bildschirm-start.js, seit 0.7.0) ---------- */
+
+.produkt-leer {
+    border-color: var(--gefahr);
+}
+
+.bestand-reicht {
+    font-size: .84rem;
+    font-weight: 700;
+    color: var(--schrift);
+    font-variant-numeric: tabular-nums;
+}
+
+.bestand-leer {
+    color: var(--gefahr);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+}
+
+.bestand-tipp {
+    justify-self: start;
+    padding: 2px 8px;
+    font-size: .74rem;
+    font-weight: 700;
+    color: var(--schrift);
+    background: var(--karte-leise);
+    border: 1px solid var(--rahmen);
+    border-radius: var(--rund-voll);
+}
+
+.tipp-kaufen {
+    color: var(--haupt-schrift);
+    background: var(--haupt);
+    border-color: var(--haupt-kante);
+}
+
+.tipp-warten {
+    border-color: var(--warnung);
+}
+
+.tipp-reicht {
+    border-color: var(--gut);
+}
+
+.tipp-mhd {
+    color: #141414;
+    background: var(--warnung);
+    border-color: var(--warnung);
+}
+
+.bestand-fakten {
+    grid-column: 1 / -1;
+    display: grid;
+    gap: 2px;
+    font-size: .76rem;
+    font-weight: 700;
+    color: var(--schrift-leise);
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+.bestand-fakten small {
+    font-weight: 400;
+}
+
+.bestand-warnung {
+    color: var(--warnung);
+}
+
+.bestand-angebot {
+    color: var(--schrift);
+}
+
+.bestand-dran {
+    font-size: .7rem;
+}
+
+.bestand-schnell {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    background: var(--karte-leise);
+    border-radius: var(--rund-klein);
+}
+
+.bestand-schnell-text {
+    flex: 1;
+    min-width: 0;
+    min-height: 34px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--schrift);
+    font: inherit;
+    font-size: .78rem;
+    font-weight: 700;
+    text-align: left;
+    text-decoration: underline dotted;
+    text-underline-offset: 3px;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+}
+
+.bestand-schnell button.knopf-still {
+    min-height: 34px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    font-size: .78rem;
+}
+
+.bestand-schnell-angebot[aria-pressed="true"] {
+    outline: 2px solid var(--warnung);
+    outline-offset: -2px;
+}
+
+.feld-haken {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 40px;
+    font-size: .9rem;
+    font-weight: 700;
+}
+
+.feld-haken input {
+    width: 20px;
+    height: 20px;
 }
 
 /* ---------- Produkt-Blatt: Scannen, Suchen, Vorschau (bildschirm-kasse.js) ---------- */
@@ -766,10 +947,19 @@ button {
     font-variant-numeric: tabular-nums;
 }
 
+/* Die Zeile ist ein Knopf zum Packungs-Blatt (seit 0.6.0). */
 .verlauf-text {
     display: grid;
     gap: 1px;
     min-width: 0;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
 }
 
 .verlauf-text b {
@@ -793,6 +983,128 @@ button {
     font-size: .82rem;
     padding-top: 4px;
     padding-bottom: 4px;
+}
+
+/* ---------- Statistik und Kacheln (bildschirm-statistik.js, seit 0.6.0) ---------- */
+
+.kacheln {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.kachel {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+    padding: 8px 10px;
+    background: var(--karte);
+    border: 1px solid var(--rahmen);
+    border-radius: var(--rund-mittel);
+}
+
+.kachel small {
+    font-size: .7rem;
+    font-weight: 700;
+    color: var(--schrift-leise);
+}
+
+.kachel b {
+    font-size: 1rem;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+.uebersicht-fakten {
+    font-size: .78rem;
+    font-weight: 700;
+    color: var(--schrift-leise);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Produkte (bildschirm-produkte.js, seit 0.6.0) ---------- */
+
+.produkt-liste {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.produkt-zeile {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 12px;
+    font: inherit;
+    text-align: left;
+    color: var(--schrift);
+    background: var(--karte);
+    border: 1px solid var(--rahmen);
+    border-radius: var(--rund-mittel);
+    box-shadow: 0 var(--karte-tiefe) 0 var(--still-kante);
+    cursor: pointer;
+}
+
+.produkt-marke {
+    font-size: .78rem;
+    font-weight: 700;
+    color: var(--schrift-leise);
+    overflow-wrap: anywhere;
+}
+
+.produkt-pfeil {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: var(--schrift-leise);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.fakten-kopf {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 4px 2px 12px;
+}
+
+.quelle {
+    margin: 18px 2px 4px;
+    font-size: .7rem;
+    color: var(--schrift-leise);
+}
+
+/* ---------- Packungs-Blatt (bildschirm-kasse.js, seit 0.6.0) ---------- */
+
+.packung-kopf {
+    margin: 2px 2px 6px;
+    font-size: .85rem;
+    font-weight: 700;
+    color: var(--schrift-leise);
+}
+
+.packung-vorschlag {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 6px 10px;
+    font-size: .8rem;
+    font-weight: 700;
+    background: var(--karte-leise);
+    border-radius: var(--rund-klein);
+}
+
+.packung-vorschlag[hidden] {
+    display: none;
+}
+
+.feld:disabled {
+    opacity: .6;
 }
 
 .werkstatt-roh {

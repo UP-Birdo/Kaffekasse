@@ -52,6 +52,10 @@
     <link rel="stylesheet" href="css/upcrew-blatt.css">
     <link rel="stylesheet" href="css/upcrew-einstellungen.css">
     <link rel="stylesheet" href="css/upcrew-offline.css">
+    <!-- Profil wie in den Spielen (seit 0.6.0; fehlen die Dateien noch, bleibt der schlichte Kopf) -->
+    <link rel="stylesheet" href="css/upcrew-abzeichen.css">
+    <link rel="stylesheet" href="css/upcrew-levelpfad.css">
+    <link rel="stylesheet" href="css/upcrew-profil.css">
     <link rel="stylesheet" href="css/stil.css">
 
     <!-- Aussehen VOR dem ersten Bild: Intro (Farbwelten), Farbwelt-Variablen, Aussehen, dann anwenden -->
@@ -69,9 +73,9 @@
 
     <!-- Das Seiten-Band: eine Seite je Tab, Wischen wechselt (Baustein upcrew-wischen) -->
     <main class="up-band" id="band">
-        <section class="up-band-seite" data-up-seite="start" aria-label="Start"></section>
-        <section class="up-band-seite" data-up-seite="verlauf" aria-label="Verlauf"></section>
-        <section class="up-band-seite" data-up-seite="einstellungen" aria-label="Einstellungen"></section>
+        <section class="up-band-seite" data-up-seite="statistik" aria-label="Statistik"></section>
+        <section class="up-band-seite" data-up-seite="start" aria-label="Bestand"></section>
+        <section class="up-band-seite" data-up-seite="produkte" aria-label="Produkte"></section>
     </main>
 
     <!-- Tab-Leiste unten (Baustein upcrew-leiste); die Knöpfe baut js/navigation.js -->
@@ -89,6 +93,12 @@
     <script src="js/upcrew-blatt.js"></script>
     <script src="js/upcrew-einstellungen.js"></script>
     <script src="js/upcrew-offline.js"></script>
+    <!-- Profil-Bausteine (seit 0.6.0): Abzeichen, dann ihre Listen, Level-Pfad, Profil. Fehlen
+         sie (noch nicht verteilt), prüft js/profil.js mit typeof und zeichnet den schlichten Kopf. -->
+    <script src="js/upcrew-abzeichen.js"></script>
+    <script src="js/upcrew-abzeichen-spiele.js"></script>
+    <script src="js/upcrew-levelpfad.js"></script>
+    <script src="js/upcrew-profil.js"></script>
     <script src="js/konto.js"></script>
     <script src="js/speicher.js"></script>
     <script src="js/speicher-konten.js"></script>
@@ -98,6 +108,7 @@
     <script src="js/zustand.js"></script>
     <script src="js/spieler.js"></script>
     <script src="js/kasse.js"></script>
+    <script src="js/bestand.js"></script>
     <script src="js/warteschlange.js"></script>
     <script src="js/steuerung.js"></script>
     <script src="js/produktsuche.js"></script>
@@ -105,8 +116,11 @@
     <script src="js/navigation.js"></script>
     <script src="js/bildschirm-anmeldung.js"></script>
     <script src="js/bildschirm-kasse.js"></script>
+    <script src="js/profil.js"></script>
     <script src="js/bildschirm-start.js"></script>
     <script src="js/bildschirm-verlauf.js"></script>
+    <script src="js/bildschirm-statistik.js"></script>
+    <script src="js/bildschirm-produkte.js"></script>
     <script src="js/bildschirm-einstellungen.js"></script>
     <script src="js/app.js"></script>
 </body>

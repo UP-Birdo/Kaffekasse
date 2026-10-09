@@ -1,7 +1,8 @@
 /*
  * bildschirm-einstellungen.js — die Einstellungen über den Studio-Baustein
- * (upcrew-einstellungen.js): Abschnitte `konto`, `aussehen`, `ueber`. Kein Abschnitt
- * `spiel`, kein `admin` (Stufe 1).
+ * (upcrew-einstellungen.js): Abschnitte `konto`, `aussehen`, `spiel` („Nur in Kaffekasse“:
+ * Kasse mit Name, Code, wechseln, verlassen), `ueber` (Version, Speicher, Wunsch, Fehler,
+ * Quellen). Kein `admin`. Seit 0.6.0 ein BLATT (EINSTELLUNGEN.oeffnen), kein Tab mehr.
  *
  * „Anpassen" ist hier EINE Zeile mit Pfeil, die ein Blatt öffnet (Nutzer-Entscheidung
  * 08.10.2026: Anpassen unter Einstellungen, nicht als Tab). Darin läuft der
@@ -15,14 +16,40 @@ const EINSTELLUNGEN = {
 
     loeseLampe: null,
     anpassen: null,
+    ort: null,
+
+    /* Seit 0.6.0 ein Blatt (kein Tab mehr): über das Menü im Profil-Kopf, das Zahnrad im Profil
+       oder — ohne Profil-Baustein — den Namen im schlichten Kopf. */
+    oeffnen() {
+        if (typeof UPCREW_BLATT === "undefined") {
+            return;
+        }
+        UPCREW_BLATT.oeffnen({
+            titel: "Einstellungen",
+            klasse: "blatt-einstellungen",
+            inhalt: (el) => {
+                EINSTELLUNGEN.ort = el;
+                EINSTELLUNGEN.zeichnen(el);
+            },
+            beimSchliessen: () => {
+                if (typeof EINSTELLUNGEN.loeseLampe === "function") {
+                    EINSTELLUNGEN.loeseLampe();
+                    EINSTELLUNGEN.loeseLampe = null;
+                }
+                EINSTELLUNGEN.ort = null;
+            }
+        });
+    },
+
+    /* Neu zeichnen, wenn das Blatt gerade offen ist (nach dem Laden der Konten, Kasse geändert). */
+    auffrischen() {
+        if (EINSTELLUNGEN.ort && EINSTELLUNGEN.ort.isConnected) {
+            EINSTELLUNGEN.zeichnen(EINSTELLUNGEN.ort);
+        }
+    },
 
     zeichnen(ort) {
         ort.textContent = "";
-        const titel = document.createElement("h1");
-        titel.className = "seite-titel";
-        titel.textContent = "Einstellungen";
-        ort.appendChild(titel);
-
         const E = UPCREW_EINSTELLUNGEN;
         const ich = APP.eigener();
         const gast = (typeof KONTO !== "undefined") && KONTO.istGastSitzung();
@@ -47,16 +74,22 @@ const EINSTELLUNGEN = {
             ]
         };
 
-        /* Abschnitt „Nur in Kaffekasse": die Kasse (Stufe 2). */
+        /* Abschnitt „Nur in Kaffekasse": die Kasse — Name, Code, wechseln, verlassen. */
         const abschnitte = [konto, aussehen];
         if (STEUERUNG.hatKasse() && STEUERUNG.stand) {
             const stand = STEUERUNG.stand;
             abschnitte.push({
                 art: "spiel",
                 zeilen: [
-                    { zeichen: "liste", titel: stand.name, unter: "Code " + stand.code, rechts: "pfeil", beiKlick: () => KASSE_BLATT.code() },
+                    { zeichen: "liste", titel: stand.name, unter: "Code " + stand.code, rechts: "pfeil", beiKlick: () => KASSE_BLATT.kasseKarte() },
+                    { zeichen: "hoch", titel: "Kasse wechseln", rechts: "pfeil", beiKlick: () => KASSE_BLATT.kasse() },
                     { zeichen: "verlassen", titel: "Kasse verlassen", gefahr: true, beiKlick: () => EINSTELLUNGEN.kasseVerlassen() }
                 ]
+            });
+        } else {
+            abschnitte.push({
+                art: "spiel",
+                zeilen: [{ zeichen: "liste", titel: "Kasse", unter: "Anlegen · Beitreten", rechts: "pfeil", beiKlick: () => KASSE_BLATT.kasse() }]
             });
         }
 
@@ -78,7 +111,10 @@ const EINSTELLUNGEN = {
                 { zeichen: "hilfe", titel: "Wunsch", rechts: "pfeil",
                     beiKlick: () => EINSTELLUNGEN.meldungOeffnen(KONFIG.wunsch.vorlageWunsch) },
                 { zeichen: "werkzeug", titel: "Fehler melden", rechts: "pfeil",
-                    beiKlick: () => EINSTELLUNGEN.meldungOeffnen(KONFIG.wunsch.vorlageFehler) }
+                    beiKlick: () => EINSTELLUNGEN.meldungOeffnen(KONFIG.wunsch.vorlageFehler) },
+                /* Quellenhinweis der Produktdaten (Nutzer 09.10.2026: nicht auf dem Start). */
+                { zeichen: "info", titel: "Quellen", unter: "Open Food Facts", rechts: "pfeil",
+                    beiKlick: () => DIALOG.hinweis({ titel: "Quellen", text: PRODUKTSUCHE.QUELLE }) }
             ]
         };
 
@@ -111,6 +147,7 @@ const EINSTELLUNGEN = {
             return;
         }
         NAVIGATION.alleVeralten();
+        EINSTELLUNGEN.auffrischen();
     },
 
     anpassenOeffnen() {

@@ -8,9 +8,11 @@
  *     STEUERUNG.hatKasse() · .stand · .zustand ("leer" | "laden" | "ok" | "fehler")
  *     await STEUERUNG.laden()                die Kasse vom Server (sonst der Stand vom Gerät)
  *     await STEUERUNG.anlegen(name) / beitreten(codeEingabe) / verlassen()
- *     await STEUERUNG.kaufen(produktId, menge) / zuruecknehmen(eintragId)
+ *     await STEUERUNG.kaufen(produktId, menge) → eintragId / zuruecknehmen(eintragId)
+ *     STEUERUNG.vorbelegung(eintragId) / await vorbelegungUebernehmen(eintragId, angebot)   (0.7.0)
  *     await STEUERUNG.produktAnlegen(felder) / produktAusblenden(produktId)
- *     STEUERUNG.darfZuruecknehmen(eintrag)
+ *     await STEUERUNG.packungAendern(eintragId, felder)   Kaufdatum, Preis, geöffnet, leer
+ *     STEUERUNG.darfZuruecknehmen(eintrag) / darfKaufAendern(eintrag) / darfZustandAendern(eintrag)
  *
  * Offline wie die Spiele: Jede Änderung landet sofort im Stand (Anzeige) und am Gerät, dann in
  * der Warteschlange (schon mit `kassen/<id>/`-Pfaden, also unabhängig von der gerade
@@ -338,10 +340,24 @@ const STEUERUNG = {
         return true;
     },
 
+    /* „+“: EIN Tipp legt die Packung an. → die Kennung des neuen Eintrags (für die
+       Vorbelegung danach) oder "" bei Ablehnung. */
     async kaufen(produktId, menge) {
         const uid = STEUERUNG._uid();
         const e = KASSE.kaufEintragen(STEUERUNG.stand, produktId, uid, STEUERUNG.jetzt(), STEUERUNG.zufall, menge || 1);
-        return STEUERUNG._anwenden(e, e ? "eintrag:" + e.eintragId : "");
+        const ok = await STEUERUNG._anwenden(e, e ? "eintrag:" + e.eintragId : "");
+        return ok ? e.eintragId : "";
+    },
+
+    /* Laden · Angebot · MHD aus dem letzten Kauf (seit 0.7.0); null ohne Vorlage. */
+    vorbelegung(eintragId) {
+        return STEUERUNG.stand ? BESTAND.vorbelegung(STEUERUNG.stand, eintragId) : null;
+    },
+
+    /* Die Vorbelegung mit einem Tipp übernehmen (mit oder ohne Angebot). */
+    async vorbelegungUebernehmen(eintragId, angebot) {
+        const felder = BESTAND.felder(STEUERUNG.vorbelegung(eintragId), angebot);
+        return STEUERUNG.packungAendern(eintragId, felder);
     },
 
     darfZuruecknehmen(eintrag) {
@@ -351,6 +367,32 @@ const STEUERUNG = {
     async zuruecknehmen(eintragId) {
         const e = KASSE.zuruecknehmen(STEUERUNG.stand, eintragId, STEUERUNG._uid(), STEUERUNG.jetzt(), KONFIG.ruecknahmeMinuten);
         return STEUERUNG._anwenden(e, "ruecknahme:" + eintragId);
+    },
+
+    /* Packung ändern (Kaufdatum, Preis, geöffnet, leer). → { ok, text }; die Rechte prüft das
+       Modell. Jede Änderung bekommt ihre eigene Kennung in der Warteschlange — zwei Änderungen
+       derselben Packung dürfen sich dort nicht ersetzen (die zweite trägt nur ihre Felder). */
+    async packungAendern(eintragId, felder) {
+        const uid = STEUERUNG._uid();
+        const jetzt = STEUERUNG.jetzt();
+        const fehler = KASSE.packungFehler(STEUERUNG.stand, eintragId, felder, uid, jetzt);
+        if (fehler) {
+            return { ok: false, text: fehler };
+        }
+        const e = KASSE.packungAendern(STEUERUNG.stand, eintragId, felder, uid, jetzt);
+        if (!e || Object.keys(e.aenderungen).length === 0) {
+            return { ok: true };
+        }
+        await STEUERUNG._anwenden(e, "packung:" + eintragId + ":" + jetzt);
+        return { ok: true };
+    },
+
+    darfKaufAendern(eintrag) {
+        return KASSE.darfKaufAendern(STEUERUNG.stand, eintrag, STEUERUNG._uid());
+    },
+
+    darfZustandAendern(eintrag) {
+        return KASSE.darfZustandAendern(STEUERUNG.stand, eintrag, STEUERUNG._uid());
     },
 
     async produktAnlegen(felder) {

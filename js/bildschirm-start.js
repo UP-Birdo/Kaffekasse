@@ -1,20 +1,25 @@
 /*
- * bildschirm-start.js — die Startseite: Kopf mit Name#Nummer, rechts der Anker des
- * Offline-Zeichens; darunter die Kasse (Stufe 2): Name und Code, je Produkt eine Karte mit
- * Bild, „Dran: <Name>", den Zählern und der EINEN Hauptaktion „+".
+ * bildschirm-start.js — der Tab „Bestand“ (Mitte, beim Start offen; bis 0.6.0 „Start“; Nutzer
+ * 09.10.2026: „in der mitte … das wichtigste … der bestand“). Oben der Profil-Kopf wie in den
+ * Spielen (js\profil.js; ohne Profil-Baustein eine schlichte Kopfzeile), rechts der Anker des
+ * Offline-Zeichens; darunter die Kasse-Karte (Name, Mitglieder, Code als Etikett) und je
+ * Produkt eine Bestand-Karte: reicht bis ~, Tipp, offen seit (von wem klein), Vorrat
+ * verschlossen (Anzahl, älteste seit, MHD), Angebot je Laden, „Dran“ klein — und die EINE
+ * Hauptaktion „+“. Nach dem „+“ die kleine Leiste „Laden · Angebot · MHD“ (vorbefüllt);
+ * „Eben …“ öffnet das Packungs-Blatt.
  *
- * Der Bildschirm rechnet nichts — Zahlen und Regeln kommen aus dem Modell (js\kasse.js),
+ * Der Bildschirm rechnet nichts — Zahlen und Regeln kommen aus dem Modell (js\kasse.js,
+ * js\bestand.js),
  * geschrieben wird über die Steuerung (js\steuerung.js). Er zeichnet neu, wenn die
  * Steuerung meldet (`beobachten`). Ohne Kasse: der Zustand „Leer" mit dem Knopf „Kasse".
- *
- * Kein Profil-Kreis (kein Profil-Baustein, Entscheidung vom 08.10.2026); das
- * Offline-Zeichen sitzt deshalb rechts im Kopf (EINBAU-OFFLINE.md, Anker „rechts").
+ * Der Quellenhinweis der Produktdaten steht NICHT hier (Nutzer 09.10.2026), sondern im
+ * Produkt-Blatt und unter „Über Kaffekasse“.
  */
 
 const START = {
 
     offlineGriff: null,
-    nameEl: null,
+    profilEl: null,
     loesen: null,
 
     zeichnen(ort) {
@@ -23,15 +28,15 @@ const START = {
         const kopf = document.createElement("header");
         kopf.className = "kopf";
         kopf.setAttribute("data-up-bl-kopf", "");
-        const name = document.createElement("div");
-        name.className = "kopf-name";
-        name.textContent = APP.anzeigeName();
+        const profil = document.createElement("div");
+        profil.className = "kopf-profil";
         const rechts = document.createElement("div");
         rechts.className = "kopf-rechts";
-        kopf.appendChild(name);
+        kopf.appendChild(profil);
         kopf.appendChild(rechts);
         ort.appendChild(kopf);
-        START.nameEl = name;
+        START.profilEl = profil;
+        PROFIL.kopf(profil);
 
         if (START.offlineGriff) {
             START.offlineGriff.aus();
@@ -93,12 +98,12 @@ const START = {
         return karte;
     },
 
-    /* Name der Kasse, Mitgliederzahl, Code (Tipp zeigt ihn groß). */
+    /* Name der Kasse, Mitgliederzahl, Code als schlankes Etikett (Tipp → Kasse-Karte). */
     _kasseKopf(ort, stand) {
         const zeile = document.createElement("button");
         zeile.type = "button";
         zeile.className = "kasse-kopf";
-        zeile.setAttribute("aria-label", "Code zeigen");
+        zeile.setAttribute("aria-label", "Kasse " + stand.name);
         const links = document.createElement("div");
         links.className = "kasse-kopf-text";
         const name = document.createElement("b");
@@ -113,53 +118,101 @@ const START = {
         code.textContent = stand.code;
         zeile.appendChild(links);
         zeile.appendChild(code);
-        zeile.addEventListener("click", () => KASSE_BLATT.code());
+        zeile.addEventListener("click", () => KASSE_BLATT.kasseKarte());
         ort.appendChild(zeile);
     },
 
+    /* Die Bestand-Karte eines Produkts: was DA ist (offen, Vorrat, MHD), reicht bis ~,
+       Angebote je Laden, der Tipp — alles aus BESTAND.lage. Mitglieder nur klein („Dran“). */
     _produktKarte(stand, produkt) {
         const S = STEUERUNG;
         const uid = (typeof KONTO !== "undefined") ? KONTO.uid() : null;
-        const zaehler = KASSE.zaehler(stand, produkt.id);
-        const gesamt = Object.keys(zaehler).reduce((a, k) => a + zaehler[k], 0);
+        const jetzt = S.jetzt();
+        const l = BESTAND.lage(stand, produkt.id, jetzt);
         const dran = KASSE.naechsterDran(stand, produkt.id);
+        const name = (wer) => (wer === uid ? "Du" : (KASSE.mitgliedName(stand, wer) || "Ehemals"));
 
         const karte = document.createElement("section");
-        karte.className = "produkt" + (dran === uid ? " produkt-dran" : "");
+        karte.className = "produkt" + (l.leer ? " produkt-leer" : "");
         karte.setAttribute("aria-label", produkt.name);
 
         karte.appendChild(START._produktBild(produkt));
 
         const text = document.createElement("div");
         text.className = "produkt-text";
-        const name = document.createElement("b");
-        name.className = "produkt-name";
-        name.textContent = produkt.name;
-        text.appendChild(name);
-        const dranZeile = document.createElement("span");
-        dranZeile.className = "produkt-dran-zeile";
-        dranZeile.textContent = dran ? (dran === uid ? "Dran: Du" : "Dran: " + KASSE.mitgliedName(stand, dran)) : "";
-        text.appendChild(dranZeile);
-        const zahlen = document.createElement("span");
-        zahlen.className = "produkt-zahlen";
-        zahlen.textContent = "Du " + (zaehler[uid] || 0) + " · Alle " + gesamt;
-        text.appendChild(zahlen);
+        const titel = document.createElement("b");
+        titel.className = "produkt-name";
+        titel.textContent = produkt.name;
+        text.appendChild(titel);
+        const reicht = document.createElement("span");
+        reicht.className = "bestand-reicht" + (l.leer ? " bestand-leer" : "");
+        reicht.textContent = BESTAND.reichtText(l, jetzt);
+        text.appendChild(reicht);
+        if (l.tipp) {
+            const tipp = document.createElement("span");
+            tipp.className = "bestand-tipp tipp-" + l.tipp.art;
+            tipp.textContent = l.tipp.text + (l.tipp.menge > 1 ? " · bis " + l.tipp.menge + " Stk." : "");
+            text.appendChild(tipp);
+        }
         karte.appendChild(text);
 
         const plus = DIALOG.knopf("+", "haupt", async () => {
             plus.disabled = true;
-            await S.kaufen(produkt.id, 1);
+            const eintragId = await S.kaufen(produkt.id, 1);
+            if (eintragId) {
+                START.schnellZeigen(produkt.id, eintragId);
+            }
         });
         plus.classList.add("produkt-plus", "up-rund");
         plus.setAttribute("aria-label", produkt.name + " eintragen");
         karte.appendChild(plus);
 
+        const fakten = document.createElement("div");
+        fakten.className = "bestand-fakten";
+        const offen = document.createElement("span");
+        if (l.offen) {
+            offen.textContent = "Offen seit " + KASSE.datumKurz(l.offen.geoeffnetAm, jetzt);
+            const von = document.createElement("small");
+            von.textContent = " · " + name(l.offen.geoeffnetVon);
+            offen.appendChild(von);
+        } else {
+            offen.textContent = "Nichts offen";
+        }
+        fakten.appendChild(offen);
+        const vorrat = document.createElement("span");
+        vorrat.className = l.abgelaufen > 0 ? "bestand-warnung" : "";
+        vorrat.textContent = BESTAND.vorratText(l, jetzt) + (l.abgelaufen > 0 ? " · " + l.abgelaufen + " abgelaufen" : "");
+        fakten.appendChild(vorrat);
+        for (const a of l.angebote) {
+            const zeile = document.createElement("span");
+            zeile.className = "bestand-angebot";
+            zeile.textContent = BESTAND.angebotText(a, jetzt);
+            fakten.appendChild(zeile);
+        }
+        if (dran) {
+            const d = document.createElement("small");
+            d.className = "bestand-dran";
+            d.textContent = "Dran: " + name(dran);
+            fakten.appendChild(d);
+        }
+        karte.appendChild(fakten);
+
+        const schnell = START._schnellLeiste(stand, produkt);
+        if (schnell) {
+            karte.appendChild(schnell);
+        }
+
         const eben = S.eigenerLetzter(produkt.id);
         if (eben) {
             const zeile = document.createElement("div");
             zeile.className = "produkt-eben";
-            const wann = document.createElement("span");
-            wann.textContent = "Eben · " + KASSE.uhrzeit(eben.wann);
+            /* Tipp auf „Eben …“ → die Packung: Kaufdatum, Preis, geöffnet, leer. */
+            const wann = document.createElement("button");
+            wann.type = "button";
+            wann.className = "produkt-eben-packung";
+            wann.textContent = "Eben · " + KASSE.uhrzeit(eben.wann) + (typeof eben.preis === "number" ? " · " + KASSE.euro(eben.preis) : " · Preis");
+            wann.setAttribute("aria-label", "Packung " + produkt.name);
+            wann.addEventListener("click", () => KASSE_BLATT.packung(eben.id));
             zeile.appendChild(wann);
             const zurueck = DIALOG.knopf("Zurück", "still", async () => {
                 const ja = await DIALOG.zweiSchritt({ titel: produkt.name, text: "Eintrag zurücknehmen?", erst: "Zurücknehmen", dann: "Wirklich" });
@@ -172,6 +225,99 @@ const START = {
             karte.appendChild(zeile);
         }
         return karte;
+    },
+
+    /* ---------------------------------------------------------------- *
+     * Die kleine Leiste nach dem „+“ (seit 0.7.0): „Laden · Angebot · MHD“, vorbefüllt aus
+     * dem letzten Kauf. Übernehmen = ein Tipp, Ändern = Packungs-Blatt, nichts tun = sie
+     * verschwindet nach KONFIG.vorbelegungMs. Der Kauf selbst steht schon (EIN Tipp auf „+“).
+     * ---------------------------------------------------------------- */
+
+    schnell: null,
+    schnellUhr: null,
+
+    schnellZeigen(produktId, eintragId) {
+        START.schnell = { produktId: produktId, eintragId: eintragId, angebot: false };
+        START._schnellUhr();
+        NAVIGATION.veralten("start");
+    },
+
+    schnellWeg() {
+        if (START.schnellUhr) {
+            clearTimeout(START.schnellUhr);
+            START.schnellUhr = null;
+        }
+        if (START.schnell) {
+            START.schnell = null;
+            NAVIGATION.veralten("start");
+        }
+    },
+
+    _schnellUhr() {
+        if (START.schnellUhr) {
+            clearTimeout(START.schnellUhr);
+        }
+        START.schnellUhr = setTimeout(() => {
+            START.schnellUhr = null;
+            START.schnellWeg();
+        }, KONFIG.vorbelegungMs);
+    },
+
+    _schnellLeiste(stand, produkt) {
+        const sch = START.schnell;
+        const e = (sch && sch.produktId === produkt.id && stand.eintraege) ? stand.eintraege[sch.eintragId] : null;
+        if (!e || !KASSE.gueltig(e)) {
+            return null;
+        }
+        const jetzt = STEUERUNG.jetzt();
+        const vorgabe = STEUERUNG.vorbelegung(sch.eintragId);
+        const felder = BESTAND.felder(vorgabe, sch.angebot);
+        const leiste = document.createElement("div");
+        leiste.className = "bestand-schnell";
+        leiste.setAttribute("role", "group");
+        leiste.setAttribute("aria-label", "Laden · Angebot · MHD");
+
+        const teile = [];
+        if (felder.laden) {
+            teile.push(felder.laden);
+        }
+        if (typeof felder.preis === "number") {
+            teile.push(KASSE.euro(felder.preis));
+        }
+        if (felder.mhd) {
+            teile.push("MHD " + KASSE.datumKurz(felder.mhd, jetzt));
+        }
+        const aendern = document.createElement("button");
+        aendern.type = "button";
+        aendern.className = "bestand-schnell-text";
+        aendern.textContent = teile.length ? teile.join(" · ") : "Laden · Angebot · MHD";
+        aendern.setAttribute("aria-label", "Ändern");
+        aendern.addEventListener("click", () => {
+            const id = sch.eintragId;
+            START.schnellWeg();
+            KASSE_BLATT.packung(id, felder);
+        });
+        leiste.appendChild(aendern);
+
+        const angebot = DIALOG.knopf("Angebot", "still", () => {
+            sch.angebot = !sch.angebot;
+            START._schnellUhr();
+            NAVIGATION.veralten("start");
+        });
+        angebot.classList.add("bestand-schnell-angebot");
+        angebot.setAttribute("aria-pressed", sch.angebot ? "true" : "false");
+        leiste.appendChild(angebot);
+
+        if (Object.keys(felder).length > 0) {
+            const uebernehmen = DIALOG.knopf("Übernehmen", "still", async () => {
+                const id = sch.eintragId;
+                const mitAngebot = sch.angebot;
+                START.schnellWeg();
+                await STEUERUNG.vorbelegungUebernehmen(id, mitAngebot);
+            });
+            leiste.appendChild(uebernehmen);
+        }
+        return leiste;
     },
 
     /* Bild aus der Strichcode-Datenbank, sonst ein Platz mit dem Anfangsbuchstaben. */
@@ -198,10 +344,10 @@ const START = {
         return huelle;
     },
 
-    /* Nur den Namen nachziehen (nach dem Laden der Konten), ohne alles neu zu bauen. */
+    /* Nur den Kopf nachziehen (nach dem Laden der Konten), ohne alles neu zu bauen. */
     kopfAktualisieren() {
-        if (START.nameEl) {
-            START.nameEl.textContent = APP.anzeigeName();
+        if (START.profilEl && START.profilEl.isConnected) {
+            PROFIL.kopf(START.profilEl);
         }
     }
 };

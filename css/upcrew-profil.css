@@ -1,0 +1,201 @@
+/* upcrew-profil.css — Profil zweistufig: Vorschau-Karte + ausführliches Profil (Blatt; seit 29.09.2026 spät schlank)
+   (seit 29.09.2026; gehört zu js/upcrew-profil.js, dazu css/upcrew-levelpfad.css). Entstanden
+   in Blunderluck v0.156.0 (Entwurf Oberfläche Runde 7). Farben aus der Farbwelt,
+   Rundungen nur über die Variablen, harte Schatten. */
+
+.up-pf-zeichen { width: 22px; height: 22px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Ring = XP im Level, Zahl = Level (FORTSCHRITT.md). */
+.up-pf-ring { position: relative; width: 46px; height: 46px; border-radius: var(--rund-voll); display: grid; place-items: center; flex: none;
+  background: conic-gradient(var(--haupt) calc(var(--up-pf-anteil, 0) * 360deg), var(--karte-leise) 0); }
+.up-pf-kreis { width: 38px; height: 38px; border-radius: var(--rund-voll); display: grid; place-items: center; background: var(--haupt);
+  color: var(--haupt-schrift); font-weight: 900; font-size: 1.15rem; border: 3px solid var(--karte); }
+.up-pf-level { position: absolute; right: -4px; bottom: -3px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: var(--rund-voll);
+  display: grid; place-items: center; background: var(--haupt); color: var(--haupt-schrift); font-size: .66rem; font-weight: 900;
+  border: 2px solid var(--karte); }
+.up-pf-ring-gross { width: 76px; height: 76px; }
+.up-pf-ring-gross .up-pf-kreis { width: 64px; height: 64px; font-size: 1.8rem; border-width: 4px; }
+.up-pf-ring-gross .up-pf-level { min-width: 28px; height: 26px; font-size: .82rem; right: -6px; bottom: -4px; }
+
+.up-pf-kopf { display: flex; align-items: center; gap: 14px; padding: 4px 4px 0; }
+.up-pf-mitte { flex: 1; min-width: 0; }
+.up-pf-name { font-size: 1.35rem; font-weight: 900; overflow-wrap: anywhere; }
+.up-pf-tag { margin-left: 3px; font-size: .8rem; font-weight: 700; color: var(--schrift-leise); }
+.up-pf-xp { height: 10px; border-radius: var(--rund-voll); background: var(--karte-leise); overflow: hidden; margin: 6px 0 3px; }
+.up-pf-xp i { display: block; height: 100%; background: var(--haupt); }
+.up-pf-xp-text { font-size: .76rem; color: var(--schrift-leise); font-weight: 700; }
+
+.up-pf-abschnitt { margin-top: 14px; }
+.up-pf-abschnitt > h3 { font-size: .74rem; letter-spacing: .06em; text-transform: uppercase; color: var(--schrift-leise); margin: 0 4px 6px; }
+.up-pf-hinweis { font-size: .74rem; color: var(--schrift-leise); margin: 6px 6px 0; line-height: 1.35; }
+
+.up-pf-plaetze, .up-pf-alle { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.up-pf-platz, .up-pf-wahl-zelle { position: relative; min-width: 0; }
+.up-pf-platz .up-az, .up-pf-wahl-zelle .up-az { width: 100%; min-height: 72px; }
+.up-pf-leer { width: 100%; min-height: 72px; display: grid; place-items: center; align-content: center; gap: 2px; padding: 8px 2px;
+  border: 2px dashed var(--rahmen); border-radius: var(--rund-klein); background: none; color: var(--schrift-leise);
+  font: inherit; font-size: .74rem; font-weight: 700; cursor: pointer; }
+.up-pf-leer .up-pf-zeichen { width: 18px; height: 18px; }
+.up-pf-gesperrt .up-az { opacity: .4; }
+.up-pf-an .up-az { outline: 2px solid var(--haupt); outline-offset: -2px; }
+.up-pf-haken { position: absolute; left: 6px; top: 6px; width: 20px; height: 20px; border-radius: var(--rund-voll); display: grid; place-items: center;
+  background: var(--haupt); color: var(--haupt-schrift); pointer-events: none; }
+.up-pf-haken .up-pf-zeichen { width: 13px; height: 13px; stroke-width: 3; }
+.up-pf-wahl > .up-pf-hinweis { margin: 0 4px 10px; }
+
+.up-pf-fakten { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.up-pf-fakt { background: var(--karte); border: 1px solid var(--rahmen); border-radius: var(--rund-mittel); padding: 10px 12px; display: grid; gap: 2px; min-width: 0; }
+.up-pf-fakt small { font-size: .7rem; font-weight: 800; color: var(--schrift-leise); display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.up-pf-fakt small .up-pf-zeichen { width: 13px; height: 13px; }
+.up-pf-fakt b { font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+.up-pf-klein { font-size: .72rem; color: var(--schrift-leise); }
+
+.up-pf-orte { display: grid; gap: 8px; }
+.up-pf-ort { display: flex; align-items: center; gap: 10px; background: var(--karte); border: 1px solid var(--rahmen); border-radius: var(--rund-mittel); padding: 10px 12px; }
+.up-pf-ort-bild { width: 38px; height: 38px; border-radius: var(--rund-klein); display: grid; place-items: center; background: var(--karte-leise); color: var(--haupt); flex: none; }
+.up-pf-ort-text { flex: 1; min-width: 0; display: grid; }
+.up-pf-ort-text small { color: var(--schrift-leise); font-size: .72rem; font-weight: 700; }
+.up-pf-ort-text b { font-size: .92rem; }
+.up-pf-ort-balken { width: 64px; height: 8px; border-radius: var(--rund-voll); background: var(--karte-leise); overflow: hidden; flex: none; }
+.up-pf-ort-balken i { display: block; height: 100%; background: var(--haupt); }
+
+.up-pf-gefuellt, .up-bl-kopf-knopf svg.up-pf-gefuellt { fill: currentColor; stroke: none; }
+.up-pf-klein-zeichen { width: 16px; height: 16px; stroke-width: 2.4; }
+.up-pf-titel { font-size: .8rem; font-weight: 800; color: var(--haupt); margin-top: 1px; }
+.up-pf-abschnitt > h3 { display: flex; align-items: center; gap: 8px; }
+.up-pf-h3-knopf { margin-left: auto; padding: 3px 10px; border: 1px solid var(--rahmen); border-radius: var(--rund-voll); background: var(--karte);
+  color: var(--schrift); font: inherit; font-size: .72rem; font-weight: 800; letter-spacing: 0; text-transform: none; cursor: pointer; }
+.up-pf-leer-fremd { cursor: default; opacity: .5; }
+
+/* ---- Stufe 1: die Vorschau-Karte (ganze Karte = ein Knopf, Level-Knopf liegt darüber) ---- */
+.up-pf-karte { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px 12px;
+  padding: 12px; background: var(--karte); border: 1px solid var(--rahmen); border-radius: var(--rund-mittel);
+  box-shadow: 0 3px 0 var(--rahmen); color: var(--schrift); }
+.up-pf-karte-auf { position: absolute; inset: 0; z-index: 1; width: 100%; margin: 0; padding: 0; border: 0; border-radius: inherit;
+  background: none; box-shadow: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.up-pf-karte-auf:focus-visible { outline: 2px solid var(--haupt); outline-offset: 2px; }
+.up-pf-karte-auf:active { background: color-mix(in srgb, var(--schrift) 5%, transparent); }
+.up-pf-karte-mitte { min-width: 0; }
+.up-pf-name-klein { font-size: 1.08rem; line-height: 1.2; }
+.up-pf-karte-zeile { display: flex; align-items: center; gap: 8px; margin-top: 5px; }
+.up-pf-lv { position: relative; z-index: 2; display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; margin: 0;
+  border: 1px solid var(--rahmen); border-radius: var(--rund-voll); background: var(--karte-leise); color: var(--schrift);
+  font: inherit; font-size: .76rem; font-weight: 900; box-shadow: none; }
+.up-pf-lv-balken { width: 36px; height: 6px; border-radius: var(--rund-voll); background: color-mix(in srgb, var(--schrift-leise) 25%, transparent); overflow: hidden; }
+.up-pf-lv-balken i { display: block; height: 100%; background: var(--haupt); }
+.up-pf-serie { display: inline-flex; align-items: center; gap: 3px; font-size: .82rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+.up-pf-serie .up-pf-zeichen { width: 17px; height: 17px; }
+.up-pf-serie-voll { color: var(--haupt); }
+.up-pf-serie-offen .up-pf-zeichen { color: color-mix(in srgb, var(--haupt) 55%, var(--schrift-leise)); }
+.up-pf-serie-aus { color: var(--schrift-leise); }
+.up-pf-karte-pfeil { width: 18px; height: 18px; color: var(--schrift-leise); }
+/* Die drei ausgerüsteten KOMPAKT als Zeichen (29.09.2026, „Start ohne Scrollen“; Name nur als title/beim Antippen). */
+.up-pf-symbole { display: inline-flex; align-items: center; gap: 6px; }
+.up-pf-karte-abzeichen { grid-column: 1 / -1; --up-az-symbol: 34px; padding-left: 58px; }
+.up-pf-karte-abzeichen .up-az-symbol { pointer-events: none; }
+.up-pf-plaetze-kompakt { display: flex; gap: 10px; }
+.up-pf-plaetze-kompakt .up-pf-platz { flex: none; --up-az-symbol: 52px; }
+.up-pf-plaetze-kompakt .up-pf-leer { width: var(--up-az-symbol); height: var(--up-az-symbol); min-height: 0; padding: 0; gap: 0;
+  border-radius: var(--rund-voll); }
+
+/* ---- Der Kopf des Starts: eine kompakte Zeile (Kreis mit Level-Ring und zwei Ecken · Name + Zeichen · ☰) ----
+   Seit 29.09.2026 spät (BL v0.157.1 / TL 0.26.1): Flamme + Serie oben links am Kreis, Level unten rechts, beide eigene
+   Knöpfe mit 32 px Trefferfläche (sichtbar kleiner Kreis darin); rechts das ☰-Menü statt des Flammen-Kreises. */
+.up-pf-kopfzeile { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 6px 0 4px 6px; }
+.up-pf-kz-feld { position: relative; flex: none; width: 52px; height: 52px; }
+.up-pf-kz-auf { display: block; width: 52px; height: 52px; margin: 0; padding: 0; border: 0; background: none; box-shadow: none;
+  border-radius: var(--rund-voll); color: var(--schrift); font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.up-pf-kz-auf:focus-visible, .up-pf-kz-ecke:focus-visible, .up-pf-menue-knopf:focus-visible {
+  outline: 2px solid var(--haupt); outline-offset: 2px; border-radius: var(--rund-voll); }
+.up-pf-ring-kopf { width: 52px; height: 52px; }
+.up-pf-ring-kopf .up-pf-kreis { width: 44px; height: 44px; font-size: 1.3rem; }
+.up-pf-kz-ecke { position: absolute; z-index: 1; min-width: 32px; height: 32px; margin: 0; padding: 0; border: 0; background: none;
+  box-shadow: none; display: grid; place-items: center; cursor: pointer; font: inherit; -webkit-tap-highlight-color: transparent; }
+.up-pf-kz-punkt { display: inline-flex; align-items: center; justify-content: center; gap: 1px; min-width: 22px; height: 22px;
+  padding: 0 5px; border-radius: var(--rund-voll); background: var(--haupt); color: var(--haupt-schrift); border: 2px solid var(--karte);
+  font-size: .64rem; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; box-sizing: border-box; pointer-events: none; }
+.up-pf-kz-serie { left: -13px; top: -13px; justify-items: start; padding-left: 4px; }
+.up-pf-kz-serie .up-pf-kz-punkt { background: var(--karte); color: var(--schrift); border-color: var(--rahmen); padding: 0 5px 0 3px; }
+.up-pf-kz-flamme { width: 12px; height: 12px; flex: none; fill: var(--haupt); stroke: none; }
+.up-pf-kz-serie-aus .up-pf-kz-flamme { fill: var(--karte-leise); stroke: var(--schrift-leise); stroke-width: 2; }
+.up-pf-kz-serie-aus .up-pf-kz-punkt { color: var(--schrift-leise); }
+.up-pf-kz-serie-offen .up-pf-kz-flamme { fill: color-mix(in srgb, var(--haupt) 55%, var(--karte)); }
+.up-pf-kz-lv { left: 31px; top: 31px; }
+.up-pf-kz-mitte { flex: 1 1 auto; min-width: 0; display: grid; gap: 4px; cursor: pointer; }
+.up-pf-kz-name { font-size: 1.02rem; font-weight: 900; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.up-pf-kz-abzeichen { --up-az-symbol: 24px; gap: 5px; }
+
+/* Das ☰-Menü: Knopf 44 px, die Karte klein rechts oben unter dem Knopf. */
+.up-pf-menue-knopf { flex: none; margin-left: auto; width: 44px; height: 44px; padding: 0; display: grid; place-items: center;
+  border: 1px solid var(--rahmen); border-radius: var(--rund-voll); background: var(--karte); color: var(--schrift);
+  cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.up-pf-menue-knopf .up-pf-zeichen { width: 22px; height: 22px; }
+.up-bl-karte.up-pf-menue-karte { left: auto; right: var(--up-pf-menue-rechts, 12px); top: var(--up-pf-menue-oben, 64px);
+  transform: none; width: auto; min-width: 190px; max-width: calc(100% - 24px); padding: 6px; animation: up-pf-menue-auf 160ms ease-out; }
+.up-pf-menue { display: grid; gap: 2px; }
+.up-pf-menue-punkt { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 46px; margin: 0; padding: 0 14px 0 12px;
+  border: 0; border-radius: var(--rund-klein); background: none; box-shadow: none; color: var(--schrift); font: inherit;
+  font-weight: 800; text-align: left; cursor: pointer; }
+.up-pf-menue-punkt:hover, .up-pf-menue-punkt:focus-visible { background: var(--karte-leise); outline: none; }
+.up-pf-menue-ersatz { position: absolute; right: 0; top: 100%; z-index: 30; min-width: 190px; padding: 6px; background: var(--karte);
+  border: 1px solid var(--rahmen); border-radius: var(--rund-mittel); box-shadow: 0 6px 0 var(--rahmen); }
+.up-pf-kopfzeile:has(.up-pf-menue-ersatz) { position: relative; }
+@keyframes up-pf-menue-auf { from { opacity: 0; transform: translateY(-6px); } }
+@media (prefers-reduced-motion: reduce) { .up-bl-karte.up-pf-menue-karte { animation: none; } }
+
+/* ---- Level-Kachel ganz unten im ausführlichen Profil ---- */
+.up-pf-level-abschnitt { margin-top: 18px; }
+.up-pf-levelkachel { display: flex; align-items: center; gap: 12px; width: 100%; margin: 0; padding: 12px; text-align: left;
+  background: var(--karte); border: 1px solid var(--rahmen); border-radius: var(--rund-mittel); box-shadow: 0 3px 0 var(--rahmen);
+  color: var(--schrift); font: inherit; }
+.up-pf-levelkachel:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--rahmen); }
+.up-pf-lk-zahl { display: grid; justify-items: center; line-height: 1; min-width: 54px; padding: 7px 8px; border-radius: var(--rund-klein);
+  background: var(--haupt); color: var(--haupt-schrift); }
+.up-pf-lk-zahl small { font-size: .6rem; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
+.up-pf-lk-zahl b { font-size: 1.5rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+.up-pf-lk-mitte { flex: 1; min-width: 0; display: grid; }
+.up-pf-lk-mitte .up-pf-xp { margin: 0 0 4px; }
+.up-pf-lk-pfad { display: inline-flex; align-items: center; gap: 2px; font-size: .74rem; font-weight: 800; color: var(--haupt); white-space: nowrap; }
+
+@media (max-width: 359px) { .up-pf-fakten { grid-template-columns: 1fr; } .up-pf-lk-pfad { font-size: 0; } }
+
+/* ---- Das ausführliche Profil SCHLANK (29.09.2026 spät, BL v0.157.2 / TL 0.26.2) ----
+   Kopf mit Flamme oben rechts und „seit …“ · Spielzeit; Level-Balken klappt den Level-Pfad inline auf; die drei
+   Plätze sind (eigen) Knöpfe. */
+.up-pf-blatt .up-pf-kopf, .up-pf > .up-pf-kopf { align-items: flex-start; }
+.up-pf-kopf .up-pf-ring-gross { width: 68px; height: 68px; }
+.up-pf-kopf .up-pf-ring-gross .up-pf-kreis { width: 57px; height: 57px; font-size: 1.6rem; }
+.up-pf-kurzfakten { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.up-pf-kf { display: inline-flex; align-items: center; gap: 4px; min-height: 28px; margin: 0; padding: 2px 9px; border-radius: var(--rund-voll);
+  background: var(--karte-leise); border: 1px solid var(--rahmen); color: var(--schrift-leise); font: inherit; font-size: .74rem;
+  font-weight: 800; font-variant-numeric: tabular-nums; box-shadow: none; }
+.up-pf-kf .up-pf-zeichen { width: 14px; height: 14px; }
+.up-pf-kf .up-pf-kf-schloss { width: 11px; height: 11px; opacity: .7; }
+button.up-pf-kf { cursor: pointer; color: var(--schrift); -webkit-tap-highlight-color: transparent; }
+button.up-pf-kf[aria-expanded="true"] { border-color: var(--haupt); }
+.up-pf-kopf-flamme { flex: none; display: inline-flex; align-items: center; gap: 3px; min-width: 44px; min-height: 44px; margin: -4px -2px 0 0;
+  padding: 0 10px 0 8px; border-radius: var(--rund-voll); background: var(--karte); border: 1px solid var(--rahmen); font: inherit;
+  font-size: .95rem; font-weight: 900; box-shadow: none; }
+.up-pf-kopf-flamme .up-pf-zeichen { width: 20px; height: 20px; }
+button.up-pf-kopf-flamme { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.up-pf-kopf-flamme.up-pf-serie-voll .up-pf-zeichen { color: var(--haupt); }
+.up-pf-kopf-flamme.up-pf-serie-voll { color: var(--schrift); }
+.up-pf-rechnung { margin: 10px 4px 0; padding: 8px 12px; border-radius: var(--rund-mittel); background: var(--karte); border: 1px solid var(--rahmen);
+  display: grid; gap: 3px; font-size: .82rem; }
+.up-pf-rechnung[hidden] { display: none; }
+.up-pf-rechnung-zeile { display: flex; justify-content: space-between; gap: 12px; font-variant-numeric: tabular-nums; }
+.up-pf-rechnung-zeile span { color: var(--schrift-leise); font-weight: 700; }
+.up-pf-rechnung-summe { border-top: 1px solid var(--rahmen); padding-top: 4px; margin-top: 2px; }
+.up-pf-rechnung-summe span { color: var(--schrift); }
+.up-pf > .up-pf-level-abschnitt { margin-top: 14px; }
+.up-pf-levelbalken { padding: 8px 12px 8px 8px; }
+.up-pf-levelbalken .up-pf-lk-zahl { min-width: 46px; padding: 5px 7px; }
+.up-pf-levelbalken .up-pf-lk-zahl b { font-size: 1.25rem; }
+.up-pf-lb-pfeil { color: var(--schrift-leise); transition: transform 160ms ease-out; }
+.up-pf-levelbalken-auf .up-pf-lb-pfeil { transform: rotate(180deg); color: var(--haupt); }
+.up-pf-levelpfad { margin-top: 10px; }
+.up-pf-platz-knopf { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.up-pf-platz-knopf:not(.up-pf-leer) { display: block; margin: 0; padding: 0; border: 0; background: none; box-shadow: none; font: inherit;
+  color: inherit; border-radius: var(--rund-voll); }
+.up-pf-platz-knopf:focus-visible { outline: 2px solid var(--haupt); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .up-pf-lb-pfeil { transition: none; } }

@@ -321,6 +321,7 @@ class SpeicherKonten extends SpeicherGemeinsam {
             roh.konten = (konten && typeof konten === "object") ? konten : {};
             roh.namen = (namen && typeof namen === "object") ? namen : {};
             this._oeffentlichVomServer = meinAuszug || null;
+            this._auszugMerken(this._oeffentlichVomServer);
             return roh;
         }
         const [oeffentlich, eigen] = await Promise.all([this._teilHolen("oeffentlich"),
@@ -328,6 +329,7 @@ class SpeicherKonten extends SpeicherGemeinsam {
         roh.konten = {};
         const fremde = (oeffentlich && typeof oeffentlich === "object") ? oeffentlich : {};
         this._oeffentlichVomServer = fremde[uid] || null;
+        this._auszugMerken(this._oeffentlichVomServer);
         for (const andere of Object.keys(fremde)) {
             if (fremde[andere] && typeof fremde[andere] === "object") {
                 roh.konten[andere] = fremde[andere];
@@ -337,6 +339,29 @@ class SpeicherKonten extends SpeicherGemeinsam {
             roh.konten[uid] = eigen;
         }
         return roh;
+    }
+
+    /*
+     * APPS OHNE FORTSCHRITT (Kaffekasse, seit 09.10.2026): `KONTO.oeffentlichVon` kann den
+     * Level-Auszug (`auszug`: Level, Serie, Spielzeit) nur mit `FORTSCHRITT` rechnen. Ohne ihn
+     * schrieb die App den eigenen öffentlichen Eintrag OHNE `auszug` — Level und Serie verschwanden
+     * in Rangliste, Freunden und Profil der Spiele, bis man wieder ein Spiel öffnete. Deshalb: den
+     * zuletzt vom Server gelesenen eigenen `auszug` merken und unverändert mitschreiben. Spiele mit
+     * `FORTSCHRITT` rechnen ihn wie bisher selbst.
+     */
+    _auszugMerken(eintrag) {
+        if (eintrag && typeof eintrag === "object" && eintrag.auszug && typeof eintrag.auszug === "object") {
+            this._auszugVomServer = eintrag.auszug;
+        }
+    }
+
+    _auszugBewahren(pfade, uid) {
+        const ohneFortschritt = typeof FORTSCHRITT === "undefined" || typeof FORTSCHRITT.auszug !== "function";
+        const ziel = pfade && pfade["oeffentlich/" + uid];
+        if (ohneFortschritt && ziel && typeof ziel === "object" && this._auszugVomServer) {
+            ziel.auszug = this._auszugVomServer;
+        }
+        return pfade;
     }
 
     /* Den eigenen Auszug sofort neu schreiben (seit v0.155.0: nach dem
@@ -370,7 +395,7 @@ class SpeicherKonten extends SpeicherGemeinsam {
         this._eingetragen = true;
         try {
             const eintrag = Object.assign(SpeicherKonten.eintragFuerServer(eigener), { uid: eigener.uid });
-            const pfade = KONTO.oeffentlichePfade(eintrag, null);
+            const pfade = this._auszugBewahren(KONTO.oeffentlichePfade(eintrag, null), eintrag.uid);
             const soll = KONTO.anmeldungVon(eintrag);
             const verzeichnis = soll ? await KONTO.verzeichnisLesen(eintrag.name) : [];
             if (verzeichnis === null) {
@@ -431,7 +456,8 @@ class SpeicherKonten extends SpeicherGemeinsam {
            der Auszug ändert"). Unter der alten Regel wie bisher. */
         let oeffentlichText = null;
         if (typeof KONTO !== "undefined" && typeof KONTO.istP12 === "function" && KONTO.istP12()) {
-            const pfade = KONTO.oeffentlichePfade(Object.assign({}, eintrag, { uid: eigener.uid }), null);
+            const pfade = this._auszugBewahren(
+                KONTO.oeffentlichePfade(Object.assign({}, eintrag, { uid: eigener.uid }), null), eigener.uid);
             oeffentlichText = JSON.stringify(pfade);
             if (oeffentlichText !== this.zuletztOeffentlich) {
                 Object.assign(aenderungen, pfade);

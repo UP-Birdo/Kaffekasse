@@ -1,0 +1,51 @@
+/* upcrew-levelpfad.css — der Level-Pfad (gehört zu js/upcrew-levelpfad.js). Neu 29.09.2026. Farben aus der
+   Farbwelt (--haupt, --haupt-schrift, --karte, --karte-leise, --rahmen, --schrift, --schrift-leise), Rundungen nur
+   über die Variablen. */
+
+.up-lp-zeichen { width: 22px; height: 22px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.up-lp-klein-zeichen { width: 16px; height: 16px; stroke-width: 2.6; }
+
+.up-lp-kopf { display: flex; align-items: center; gap: 14px; padding: 4px 4px 12px; }
+.up-lp-gross { display: grid; justify-items: center; line-height: 1; min-width: 64px; padding: 8px 10px; border-radius: var(--rund-mittel);
+  background: var(--haupt); color: var(--haupt-schrift); }
+.up-lp-gross small { font-size: .66rem; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
+.up-lp-gross b { font-size: 1.9rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+.up-lp-mitte { flex: 1; min-width: 0; }
+.up-lp-balken { display: block; height: 10px; border-radius: var(--rund-voll); background: var(--karte-leise); overflow: hidden; }
+.up-lp-balken i { display: block; height: 100%; background: var(--haupt); }
+.up-lp-balken.up-lp-klein { height: 6px; margin-top: 5px; }
+.up-lp-xp { display: block; margin-top: 5px; font-size: .76rem; font-weight: 700; color: var(--schrift-leise); font-variant-numeric: tabular-nums; }
+
+/* Der Weg: Knoten an einer senkrechten Linie, rechts die Belohnung. */
+.up-lp-weg { list-style: none; margin: 0; padding: 0; }
+.up-lp-stufe { position: relative; display: flex; align-items: center; gap: 12px; padding: 5px 0; }
+.up-lp-stufe::before { content: ""; position: absolute; left: 19px; top: 0; bottom: 0; width: 4px; margin-left: -2px; background: var(--karte-leise); }
+.up-lp-stufe:first-child::before { top: 50%; }
+.up-lp-stufe:last-child::before { bottom: 50%; }
+.up-lp-erreicht::before { background: var(--haupt); }
+.up-lp-aktuell::before { background: linear-gradient(var(--haupt) 50%, var(--karte-leise) 50%); }
+.up-lp-knoten { position: relative; z-index: 1; width: 38px; height: 38px; flex: none; border-radius: var(--rund-voll); display: grid; place-items: center;
+  background: var(--karte); border: 3px solid var(--karte-leise); color: var(--schrift-leise); font-size: .8rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+.up-lp-erreicht .up-lp-knoten { background: var(--haupt); border-color: var(--haupt); color: var(--haupt-schrift); }
+.up-lp-aktuell .up-lp-knoten { width: 44px; height: 44px; margin: 0 -3px; background: var(--karte); border-color: var(--haupt); color: var(--schrift); font-size: .95rem;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--haupt) 25%, transparent); }
+
+.up-lp-karte { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--rund-mittel);
+  background: var(--karte); border: 1px solid var(--rahmen); }
+.up-lp-bild { width: 34px; height: 34px; flex: none; border-radius: var(--rund-klein); display: grid; place-items: center; background: var(--karte-leise); color: var(--haupt); }
+.up-lp-bild .up-lp-zeichen { width: 20px; height: 20px; }
+.up-lp-text { flex: 1; min-width: 0; display: grid; }
+.up-lp-text b { font-size: .88rem; font-weight: 800; overflow-wrap: anywhere; }
+.up-lp-stern { margin-left: 5px; color: var(--figur, var(--haupt)); font-size: .8rem; }
+.up-lp-rechts { flex: none; display: inline-flex; align-items: center; font-size: .7rem; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; color: var(--schrift-leise); }
+.up-lp-erreicht .up-lp-rechts { color: var(--haupt); }
+.up-lp-aktuell .up-lp-karte { border: 2px solid var(--haupt); box-shadow: 0 3px 0 color-mix(in srgb, var(--haupt) 45%, var(--rahmen)); }
+.up-lp-aktuell .up-lp-rechts { color: var(--haupt); }
+.up-lp-kommend .up-lp-karte { background: transparent; border-style: dashed; }
+.up-lp-kommend .up-lp-bild { color: var(--schrift-leise); }
+.up-lp-kommend .up-lp-text b { color: var(--schrift-leise); }
+.up-lp-platzhalter .up-lp-text b { font-style: italic; }
+
+/* Jede Level-Anzeige, die den Pfad öffnet. */
+.up-lp-antippbar { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.up-lp-antippbar:focus-visible { outline: 2px solid var(--haupt); outline-offset: 2px; border-radius: var(--rund-klein); }

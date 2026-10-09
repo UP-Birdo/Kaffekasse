@@ -23,7 +23,11 @@ const ZUSTAND = {
         liste: "M8 6 H20 M8 12 H20 M8 18 H20 M4 6 V6.1 M4 12 V12.1 M4 18 V18.1",
         netz: "M7 18 H16.5 A4 4 0 0 0 17 10 A5.5 5.5 0 0 0 6.6 9.2 A4.4 4.4 0 0 0 7 18 Z M4 4 L20 20",
         plus: "M12 5 V19 M5 12 H19",
-        haken: "M5 12.5 L10 17 L19 7"
+        haken: "M5 12.5 L10 17 L19 7",
+        /* Seit 0.6.0 für die Tabs Statistik und Produkte (schlichte Striche, austauschbar). */
+        statistik: "M5 20 V12 M12 20 V5 M19 20 V15 M3 20 H21",
+        paket: "M4 8 L12 4 L20 8 V16 L12 20 L4 16 Z M4 8 L12 12 L20 8 M12 12 V20",
+        pfeil: "M9 5 L16 12 L9 19"
     },
 
     zeichen(name, klasse) {

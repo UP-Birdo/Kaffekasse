@@ -1,6 +1,7 @@
 /*
  * bildschirm-kasse.js — die Blätter rund um die Kasse (über upcrew-blatt.js, die Seite bleibt
- * dahinter sichtbar): Kasse anlegen oder beitreten, Produkt anlegen, Code zeigen.
+ * dahinter sichtbar): Kasse anlegen oder beitreten, Kasse-Karte (Code, Wechseln), Produkt
+ * anlegen, Code zeigen und seit 0.6.0 das Packungs-Blatt (Kaufdatum, Preis, geöffnet, leer).
  *
  * Kein Rechnen hier: Codes prüft das Modell (KASSE.codePruefen), geschrieben wird über die
  * Steuerung. Texte kurz, keine ganzen Sätze (UPCrew-Standard).
@@ -55,6 +56,229 @@ const KASSE_BLATT = {
                 name.feld.focus();
             }
         });
+    },
+
+    /* Die Kasse-Karte (Tipp auf die Kasse im Start, Menü „Kasse“): Name, Code als Etikett,
+       Mitglieder; „Wechseln“ öffnet Anlegen/Beitreten. Ohne Kasse gleich das Blatt „Kasse“. */
+    kasseKarte() {
+        const stand = STEUERUNG.stand;
+        if (typeof UPCREW_BLATT === "undefined") {
+            return;
+        }
+        if (!stand) {
+            KASSE_BLATT.kasse();
+            return;
+        }
+        UPCREW_BLATT.oeffnen({
+            art: "karte",
+            titel: stand.name,
+            inhalt: (el) => {
+                const gross = document.createElement("div");
+                gross.className = "code-gross";
+                gross.textContent = stand.code;
+                gross.setAttribute("aria-label", "Code " + stand.code.split("").join(" "));
+                el.appendChild(gross);
+                const unter = document.createElement("p");
+                unter.className = "code-unter";
+                const anzahl = Object.keys(stand.mitglieder).length;
+                unter.textContent = "Code · " + anzahl + (anzahl === 1 ? " Mitglied" : " Mitglieder");
+                el.appendChild(unter);
+                const wechseln = DIALOG.knopf("Wechseln", "still", () => {
+                    UPCREW_BLATT.schliessen();
+                    KASSE_BLATT.kasse();
+                });
+                el.appendChild(KASSE_BLATT._knoepfe(DIALOG.knopf("Ok", "haupt", () => UPCREW_BLATT.schliessen()), wechseln));
+            }
+        });
+    },
+
+    /* Das Packungs-Blatt (Tipp auf „Eben …“, eine Verlauf-Zeile, eine der letzten Packungen):
+       Kaufdatum und Preis (nur wer gekauft hat), geöffnet und leer (jedes Mitglied), jedes
+       Datum frei wählbar, auch rückwirkend; „Jetzt“ als schneller Knopf. Zum Preis ein
+       Vorschlag aus Open Prices, wenn es einen gibt. Rechte und Prüfung: das Modell.
+       Seit 0.7.0 dazu Laden (Auswahl = alle Läden der Kasse), Angebot, MHD — nur Käufer.
+       `vorgabe` (wahlfrei, aus der Leiste nach dem „+“): { laden, preis, angebot, mhd } füllt
+       leere Felder vor; gespeichert wird erst mit „Speichern“. */
+    packung(eintragId, vorgabe) {
+        const S = STEUERUNG;
+        const stand = S.stand;
+        const e = (stand && stand.eintraege) ? stand.eintraege[eintragId] : null;
+        if (!e || typeof UPCREW_BLATT === "undefined") {
+            return;
+        }
+        const vor = vorgabe || {};
+        const eintrag = Object.assign({ id: eintragId }, e);
+        const produkt = stand.produkte[e.produktId] || { name: "Produkt", ean: "" };
+        const uid = (typeof KONTO !== "undefined") ? KONTO.uid() : null;
+        const kauf = S.darfKaufAendern(eintrag);
+        const zustand = S.darfZustandAendern(eintrag);
+        const name = (wer) => (wer === uid ? "Du" : (KASSE.mitgliedName(stand, wer) || "Ehemals"));
+        UPCREW_BLATT.oeffnen({
+            titel: produkt.name,
+            klasse: "blatt-packung",
+            inhalt: (el) => {
+                const kopf = document.createElement("p");
+                kopf.className = "packung-kopf";
+                kopf.textContent = name(e.wer) + (e.menge > 1 ? " · " + e.menge + " Packungen" : "")
+                    + (KASSE.gueltig(e) ? "" : " · zurück");
+                el.appendChild(kopf);
+
+                const kaufTeil = KASSE_BLATT._abschnitt(el, "Kauf");
+                const gekauft = KASSE_BLATT._zeitFeld(kaufTeil, "gekauft", "Gekauft", KASSE.kaufZeit(e), kauf, false);
+                const preis = KASSE_BLATT._feld("packung-preis", "Preis je Packung", "1,29", "text", 9);
+                preis.feld.inputMode = "decimal";
+                preis.feld.value = KASSE.preisAlsText(typeof e.preis === "number" ? e.preis : (kauf ? vor.preis : undefined));
+                preis.feld.disabled = !kauf;
+                kaufTeil.appendChild(preis.zeile);
+                const vorschlag = document.createElement("div");
+                vorschlag.className = "packung-vorschlag";
+                vorschlag.hidden = true;
+                kaufTeil.appendChild(vorschlag);
+
+                const laden = KASSE_BLATT._feld("packung-laden", "Laden", "Lidl", "text", KASSE.LADEN_MAX);
+                laden.feld.value = e.laden || (kauf && vor.laden) || "";
+                laden.feld.disabled = !kauf;
+                const auswahl = document.createElement("datalist");
+                auswahl.id = "blatt-packung-laeden";
+                for (const l of BESTAND.laeden(stand)) {
+                    const o = document.createElement("option");
+                    o.value = l.laden;
+                    auswahl.appendChild(o);
+                }
+                laden.feld.setAttribute("list", auswahl.id);
+                laden.zeile.appendChild(auswahl);
+                kaufTeil.appendChild(laden.zeile);
+
+                const angebotZeile = document.createElement("label");
+                angebotZeile.className = "feld-haken";
+                const angebot = document.createElement("input");
+                angebot.type = "checkbox";
+                angebot.id = "blatt-packung-angebot";
+                angebot.checked = e.angebot === true || (kauf && vor.angebot === true);
+                angebot.disabled = !kauf;
+                const angebotText = document.createElement("span");
+                angebotText.textContent = "Im Angebot";
+                angebotZeile.appendChild(angebot);
+                angebotZeile.appendChild(angebotText);
+                kaufTeil.appendChild(angebotZeile);
+
+                const mhd = KASSE_BLATT._feld("packung-mhd", "MHD", "", "date", 0);
+                mhd.feld.value = KASSE.alsDatum(e.mhd || (kauf ? vor.mhd : 0));
+                mhd.feld.disabled = !kauf;
+                kaufTeil.appendChild(mhd.zeile);
+                if (!kauf) {
+                    kaufTeil.appendChild(KASSE_BLATT._hinweis("Nur Käufer"));
+                }
+
+                const offenTeil = KASSE_BLATT._abschnitt(el, "Geöffnet");
+                const geoeffnet = KASSE_BLATT._zeitFeld(offenTeil, "geoeffnet", "Geöffnet", e.geoeffnetAm, zustand, true);
+                if (e.geoeffnetAm) {
+                    offenTeil.appendChild(KASSE_BLATT._hinweis("von " + name(e.geoeffnetVon)));
+                }
+                const leerTeil = KASSE_BLATT._abschnitt(el, "Leer");
+                const leer = KASSE_BLATT._zeitFeld(leerTeil, "leer", "Leer", e.leerAm, zustand, true);
+                if (e.leerAm) {
+                    leerTeil.appendChild(KASSE_BLATT._hinweis("von " + name(e.leerVon)));
+                }
+
+                const fehler = document.createElement("div");
+                fehler.className = "feld-fehler";
+                fehler.setAttribute("role", "alert");
+                el.appendChild(fehler);
+
+                const speichern = DIALOG.knopf("Speichern", "haupt", async () => {
+                    fehler.textContent = "";
+                    const felder = {};
+                    const zeitGeaendert = (feld, bisher) => feld.value !== KASSE.alsEingabe(bisher);
+                    if (kauf && zeitGeaendert(gekauft, KASSE.kaufZeit(e))) {
+                        felder.gekauftAm = gekauft.value ? KASSE.ausEingabe(gekauft.value) : null;
+                    }
+                    if (kauf && preis.feld.value.trim() !== KASSE.preisAlsText(e.preis)) {
+                        const cent = KASSE.preisAusText(preis.feld.value);
+                        if (cent === -1) {
+                            fehler.textContent = "Preis ungültig";
+                            return;
+                        }
+                        felder.preis = cent;
+                    }
+                    if (kauf && KASSE.ladenText(laden.feld.value) !== (e.laden || "")) {
+                        felder.laden = KASSE.ladenText(laden.feld.value) || null;
+                    }
+                    if (kauf && angebot.checked !== (e.angebot === true)) {
+                        felder.angebot = angebot.checked ? true : null;
+                    }
+                    if (kauf && mhd.feld.value !== KASSE.alsDatum(e.mhd)) {
+                        felder.mhd = mhd.feld.value ? KASSE.ausDatum(mhd.feld.value) : null;
+                    }
+                    if (zustand && zeitGeaendert(geoeffnet, e.geoeffnetAm)) {
+                        felder.geoeffnetAm = geoeffnet.value ? KASSE.ausEingabe(geoeffnet.value) : null;
+                    }
+                    if (zustand && zeitGeaendert(leer, e.leerAm)) {
+                        felder.leerAm = leer.value ? KASSE.ausEingabe(leer.value) : null;
+                    }
+                    const r = await S.packungAendern(eintragId, felder);
+                    if (!r.ok) {
+                        fehler.textContent = r.text || "Abgelehnt";
+                        return;
+                    }
+                    UPCREW_BLATT.schliessen();
+                });
+                speichern.disabled = !(kauf || zustand);
+                const knoepfe = [speichern];
+                if (S.darfZuruecknehmen(eintrag)) {
+                    knoepfe.push(DIALOG.knopf("Zurücknehmen", "still", async () => {
+                        const ja = await DIALOG.zweiSchritt({ titel: produkt.name, text: "Eintrag zurücknehmen?", erst: "Zurücknehmen", dann: "Wirklich" });
+                        if (ja) {
+                            await S.zuruecknehmen(eintragId);
+                            UPCREW_BLATT.schliessen();
+                        }
+                    }));
+                }
+                el.appendChild(KASSE_BLATT._knoepfe(...knoepfe));
+
+                /* Der Preis-Vorschlag kommt still nach — oder gar nicht. */
+                if (kauf && produkt.ean && typeof PRODUKTSUCHE !== "undefined") {
+                    PRODUKTSUCHE.preisVorschlag(produkt.ean).then((v) => {
+                        if (!v || !v.gefunden || !vorschlag.isConnected) {
+                            return;
+                        }
+                        vorschlag.textContent = "";
+                        const text = document.createElement("span");
+                        text.textContent = "Vorschlag " + KASSE.euro(v.cent) + " · " + v.anzahl + (v.anzahl === 1 ? " Meldung" : " Meldungen");
+                        vorschlag.appendChild(text);
+                        vorschlag.appendChild(DIALOG.knopf("Übernehmen", "still", () => {
+                            preis.feld.value = KASSE.preisAlsText(v.cent);
+                        }));
+                        vorschlag.hidden = false;
+                    });
+                }
+            }
+        });
+    },
+
+    /* Ein Datum mit Uhrzeit, frei wählbar; dazu „Jetzt“ und (wahlfrei) „Löschen“. → das Feld. */
+    _zeitFeld(abschnitt, kennung, titel, ms, darf, mitLoeschen) {
+        const f = KASSE_BLATT._feld("packung-" + kennung, titel, "", "datetime-local", 0);
+        f.feld.value = KASSE.alsEingabe(ms);
+        f.feld.disabled = !darf;
+        abschnitt.appendChild(f.zeile);
+        if (darf) {
+            const reihe = document.createElement("div");
+            reihe.className = "feld-reihe";
+            reihe.appendChild(DIALOG.knopf("Jetzt", "still", () => { f.feld.value = KASSE.alsEingabe(STEUERUNG.jetzt()); }));
+            if (mitLoeschen) {
+                reihe.appendChild(DIALOG.knopf("Löschen", "still", () => { f.feld.value = ""; }));
+            }
+            abschnitt.appendChild(reihe);
+        }
+        return f.feld;
+    },
+
+    _hinweis(text) {
+        const h = document.createElement("div");
+        h.className = "feld-hinweis";
+        h.textContent = text;
+        return h;
     },
 
     /* Den Beitrittscode groß zeigen — zum Vorlesen oder Abschreiben. */
