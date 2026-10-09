@@ -1,0 +1,67 @@
+/*
+ * upcrew-leiste.css — die Tab-Leiste unten, gleich in Blunderluck und Typoluck (Runde 4).
+ * Gemeinsamer Baustein: in die Apps KOPIEREN, nie abwandeln.
+ *
+ * Nutzer, 27.09.2026: „unten das Tab-Band soll keine Schrift haben bis auf den Tab, wo man derzeit ist, und das
+ * Symbol soll nach vorne gehoben werden.“
+ *
+ * Aufbau (die App erzeugt genau das):
+ *   <nav class="up-leiste">
+ *     <button type="button" class="up-tab" aria-current="page" aria-label="Start">
+ *       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="…"/></svg><span>Start</span>
+ *     </button>
+ *     <button type="button" class="up-tab up-tab-still" aria-label="Bald" disabled>…</button>
+ *   </nav>
+ * - Nur Symbole; der Name steht NUR am aktiven Tab (aria-current="page"). aria-label trägt den Namen für Vorleser.
+ * - Der aktive Tab wird zur breiten KAPSEL in der Hauptfarbe (leicht gehoben, Kante darunter): Symbol + Name
+ *   nebeneinander IN der Kapsel, der Name leicht eingeprägt; Wechsel federt. (Nutzer 27.09.2026: „Fix unten die
+ *   Schrift … mach, dass es schön aussieht“ → aus vier Vorschlägen `entwuerfe\Leiste-Schrift\` gewählt: „die untere
+ *   Variante“ = C · Kapsel. Vorher stand der Name unter einer hochgehobenen Kachel und stieß an deren Unterkante.)
+ * - Symbole: 24er-Raster, Strich 2, runde Enden (wie bisher). Aufgaben-Pfeil NEU (27.09.): M3 18 L9 12 L13 16 L21 8 M15 8 H21 V14
+ * - WECHSEL (Nutzer 27.09.2026 „die Animation beim Tab-Wechseln muss besser werden“ → aus `entwuerfe\Leiste-Schrift\
+ *   wechsel.html` gewählt: „C“ = Gleiten + Hüpfen): EINE Kapsel fährt gefedert vom alten zum neuen Tab, das Symbol
+ *   hüpft beim Ankommen kurz. Dafür gehört `upcrew-leiste.js` dazu (nach dieser Datei laden, einmal
+ *   `UPCREW_LEISTE.an(nav)` je Leiste). Es beobachtet `aria-current` selbst — die App ändert an ihrem Tab-Wechsel
+ *   NICHTS. Ohne Skript (oder bevor es läuft) gilt der Rückfall: jede Kapsel wächst an ihrem Platz (::before).
+ * Braucht die Farbwelt-Variablen (--karte, --rahmen, --schrift-leise, --haupt, --haupt-kante, --haupt-schrift).
+ */
+.up-leiste { position: relative; z-index: 3; display: flex; height: 64px; flex: none; overflow: visible;
+  border-top: 1px solid var(--rahmen); background: var(--karte); padding-bottom: env(safe-area-inset-bottom, 0); }
+.up-tab { position: relative; flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; border: 0; padding: 0;
+  background: none; color: var(--schrift-leise); cursor: pointer; font: inherit; -webkit-tap-highlight-color: transparent;
+  transition: flex 240ms cubic-bezier(.3, 1.3, .5, 1); }
+.up-tab svg { position: relative; z-index: 1; flex: none; width: 24px; height: 24px; fill: none; stroke: currentColor;
+  stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
+  transition: transform 240ms cubic-bezier(.3, 1.5, .5, 1), color 160ms; }
+.up-tab span { position: relative; z-index: 1; max-width: 0; overflow: hidden; opacity: 0; white-space: nowrap;
+  font-size: .74rem; font-weight: 900; letter-spacing: -.01em; color: var(--haupt-schrift); pointer-events: none;
+  transition: max-width 240ms, margin 240ms, opacity 160ms, transform 240ms cubic-bezier(.3, 1.5, .5, 1); }
+.up-tab::before { content: ""; position: absolute; left: 50%; top: 50%; width: calc(100% - 8px); height: 44px;
+  border-radius: 16px; transform: translate(-50%, -50%) scaleX(.4); opacity: 0; background: var(--haupt);
+  box-shadow: 0 5px 0 var(--haupt-kante), 0 8px 18px rgb(0 0 0 / .35);
+  transition: transform 240ms cubic-bezier(.3, 1.5, .5, 1), opacity 160ms; }
+.up-tab[aria-current="page"] { flex: 2.5; color: var(--haupt-schrift); }   /* 2.5: „Sammlung“ passt auch bei 320 px */
+.up-tab[aria-current="page"]::before { opacity: 1; transform: translate(-50%, -62%) scaleX(1); }
+.up-tab[aria-current="page"] svg { transform: translateY(-5px); }
+.up-tab[aria-current="page"] span { max-width: 96px; margin-left: 5px; opacity: 1; transform: translateY(-5px);
+  text-shadow: 0 1px 0 rgb(255 255 255 / .35); }
+.up-tab:focus-visible { outline: 2px solid var(--haupt); outline-offset: -4px; border-radius: 12px; }
+.up-tab-still, .up-tab:disabled { opacity: .35; cursor: default; }
+
+/* Mit upcrew-leiste.js: EINE wandernde Kapsel statt ::before je Tab; Name blendet nach dem Ankommen ein. */
+.up-leiste.up-mit-kapsel .up-tab { transition: flex 320ms cubic-bezier(.3, 1.35, .5, 1); }
+.up-leiste.up-mit-kapsel .up-tab::before { display: none; }
+.up-leiste.up-mit-kapsel .up-tab svg { transition: transform 320ms cubic-bezier(.3, 1.35, .5, 1), color 200ms; }
+.up-leiste.up-mit-kapsel .up-tab span { transition: max-width 320ms cubic-bezier(.3, 1.35, .5, 1),
+  margin 320ms cubic-bezier(.3, 1.35, .5, 1), opacity 180ms 120ms, transform 320ms cubic-bezier(.3, 1.35, .5, 1); }
+.up-kapsel { position: absolute; z-index: 0; top: 0; left: 0; height: 44px; border-radius: 16px; background: var(--haupt);
+  box-shadow: 0 5px 0 var(--haupt-kante), 0 8px 18px rgb(0 0 0 / .35); pointer-events: none;
+  transition: transform 320ms cubic-bezier(.3, 1.35, .5, 1), width 320ms cubic-bezier(.3, 1.35, .5, 1); }
+.up-kapsel.up-ohne-weg { transition: none; }
+.up-tab.up-hopp svg { animation: up-hopp 420ms cubic-bezier(.3, 1.35, .5, 1); }
+@keyframes up-hopp { 0% { transform: translateY(-5px) scale(1); } 35% { transform: translateY(-11px) scale(1.18); }
+  100% { transform: translateY(-5px) scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .up-tab, .up-tab svg, .up-tab::before, .up-tab span, .up-kapsel,
+  .up-leiste.up-mit-kapsel .up-tab, .up-leiste.up-mit-kapsel .up-tab svg, .up-leiste.up-mit-kapsel .up-tab span { transition: none; }
+  .up-tab.up-hopp svg { animation: none; } }

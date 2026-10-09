@@ -1,0 +1,79 @@
+/*
+ * upcrew-wischen.css — zu upcrew-wischen.js (Tabs wechseln durch Wischen: das Seiten-Band), gleich in Blunderluck
+ * und Typoluck. Gemeinsamer Baustein: in die Apps KOPIEREN, nie abwandeln.
+ *
+ * Das Band ist ein Behälter, den der Browser selbst waagrecht rollt und an jeder Seite einrastet. Jede Seite ist
+ * so breit wie das Band und rollt senkrecht für sich. Das Spiel legt fest, wo das Band steht und wie hoch es ist
+ * (Vorgabe: das ganze Fenster), und gibt den Seiten ihren Innenabstand (Streifen oben, Leiste unten).
+ *
+ *     <main class="up-band"> <section class="up-band-seite" data-up-seite="start"> … </section> … </main>
+ */
+.up-band {
+    display: flex;
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    /* An den Enden ist Stopp: kein Gummiband, und der Wisch am Ende wird nicht zur „Zurück“-Geste des Browsers. */
+    overscroll-behavior-x: none;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+}
+
+.up-band::-webkit-scrollbar {
+    display: none;
+}
+
+.up-band-seite {
+    flex: 0 0 100%;
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    box-sizing: border-box;
+    /* Nichts in einer Seite rollt waagrecht — der waagrechte Wisch gehört dem Band. */
+    overflow-x: hidden;
+    overflow-y: auto;
+    /* Senkrecht bleibt das Rollen in der Seite (kein Ziehen-zum-Neuladen, keine Kette zum Dokument); waagrecht
+       reicht die Seite den Wisch an das Band weiter. */
+    overscroll-behavior-y: contain;
+    overscroll-behavior-x: auto;
+    scroll-snap-align: start;
+    /* Höchstens eine Seite je Wisch, auch mit Schwung. */
+    scroll-snap-stop: always;
+}
+
+/* Stille Tabs stehen nicht im Band (der Baustein setzt `hidden`). */
+.up-band-seite[hidden] {
+    display: none;
+}
+
+/* Gesperrt: Partie, Anmeldung (Klasse vom Baustein) — oder ein Blatt / eine Karte ist offen (upcrew-blatt.js
+   setzt die Klasse an <html>). Der Rollstand bleibt, das Band rührt sich nur nicht. */
+.up-band.up-band-gesperrt,
+html.up-bl-offen .up-band {
+    overflow-x: hidden;
+}
+
+/* Stellen, die selbst waagrecht ziehen (Schieberegler, Spielbrett): Hier beginnt kein Seitenwechsel. */
+.up-band input[type="range"],
+.up-band [data-kein-wischen],
+.up-band .up-band-fest {
+    touch-action: pan-y pinch-zoom;
+}
+
+/* Nur mit `maus: true`, solange die Maus das Band zieht und es danach ausrollt: Das Einrasten ruht (sonst
+   spränge das Band dem Zeiger davon), nichts wird markiert. */
+.up-band.up-band-zieht {
+    scroll-snap-type: none;
+    cursor: grabbing;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .up-band {
+        scroll-behavior: auto;
+    }
+}

@@ -1,0 +1,29 @@
+name: Fehler
+description: Etwas geht nicht oder sieht falsch aus
+title: "[Fehler] "
+labels: ["fehler"]
+body:
+    - type: textarea
+      id: idee
+      attributes:
+          label: Was ist passiert?
+          placeholder: z. B. Nach „+" blieb der Zähler bei 0, obwohl Netz da war …
+      validations:
+          required: true
+    - type: input
+      id: geraet
+      attributes:
+          label: Gerät und Browser
+          placeholder: z. B. iPhone 13, Safari
+    - type: input
+      id: stelle
+      attributes:
+          label: An welcher Stelle?
+          description: Füllt die App automatisch aus, wenn die Meldung von dort kommt.
+          placeholder: z. B. Kasse
+    - type: input
+      id: fassung
+      attributes:
+          label: Fassung
+          description: Version der App (Einstellungen → Über Kaffekasse).
+          placeholder: z. B. 0.5.0

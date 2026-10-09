@@ -1,0 +1,53 @@
+/* UPCrew-Studio-Intro — gehoert zu upcrew-intro.js.
+   Alle Namen mit "upi-", damit nichts mit den Klassen der Apps zusammenstoesst.
+   Die Ebene kommt aus der App: --ebene-intro (Typoluck 55, Blunderluck 95, Trainer 50). */
+
+.upi {
+  position: fixed;
+  inset: 0;
+  z-index: var(--ebene-intro, 55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 1;
+  transition: opacity 400ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.upi[hidden] { display: none; }
+.upi.upi-weg { opacity: 0; }
+.upi-buehne { width: min(88vw, 560px); }
+.upi-buehne svg { display: block; width: 100%; height: auto; overflow: visible; }
+
+/* Bausteine der Bewegung - alles endet ruhig und exakt auf der Endform */
+.upi-bu { animation: upi-bu .45s cubic-bezier(.2,.7,.2,1) both; animation-delay: calc(var(--t0) + var(--i) * 70ms); transform-box: fill-box; }
+@keyframes upi-bu { from { opacity: 0; transform: translateY(10px); } }
+.upi-ein { animation: upi-ein .35s ease-out both; animation-delay: var(--t0); }
+@keyframes upi-ein { from { opacity: 0; } }
+.upi-aus { animation: upi-aus .35s ease-in both; animation-delay: var(--t0); }
+@keyframes upi-aus { to { opacity: 0; } }
+.upi-zieh { stroke-dasharray: 1; animation: upi-zieh .6s cubic-bezier(.5,0,.2,1) both; animation-delay: var(--t0); }
+@keyframes upi-zieh { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+.upi-fall { animation: upi-fall .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: var(--t0); }
+@keyframes upi-fall { from { opacity: 0; transform: translateY(-40px); } }
+.upi-seg { animation: upi-seg .22s linear both; animation-delay: calc(var(--i) * 70ms + 250ms); }
+@keyframes upi-seg { from { opacity: .06; } to { opacity: 1; } }
+.upi-pad { animation: upi-pad .3s ease-out both; animation-delay: calc(var(--t0) + var(--i) * 90ms); }
+@keyframes upi-pad { from { fill: var(--aus); } to { fill: var(--an); } }
+.upi-taste { animation: upi-taste .4s ease-in-out both; animation-delay: var(--t0); transform-box: fill-box; }
+@keyframes upi-taste { 0%, 100% { transform: translateY(0); } 40%, 60% { transform: translateY(4px); } }
+/* B: das Kreuz erscheint sofort, waechst von Tastengroesse (0,44) auf Buchstabengroesse und faerbt sich von innen:
+   die Arme in Schriftfarbe ziehen sich von der Mitte zur Spitze (upi-arm), dann wechselt es auf das Wirbel-Kreuz */
+.upi-zeigen { animation: upi-zeigen 1ms linear both; animation-delay: var(--t0); }
+@keyframes upi-zeigen { from { opacity: 0; } to { opacity: 1; } }
+.upi-verbergen { animation: upi-verbergen 1ms linear both; animation-delay: var(--t0); }
+@keyframes upi-verbergen { from { opacity: 1; } to { opacity: 0; } }
+.upi-wachsen { animation: upi-wachsen .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: var(--t0); transform-box: fill-box; transform-origin: center; }
+@keyframes upi-wachsen { from { transform: scale(.44); } }
+.upi-zieh.upi-arm { animation-duration: .5s; animation-timing-function: cubic-bezier(.3,.5,.3,1); }
+.upi-pp-form { transform-box: fill-box; transform-origin: center; }
+
+@media (prefers-reduced-motion: reduce) {
+  .upi-bu, .upi-ein, .upi-aus, .upi-zieh, .upi-fall, .upi-seg, .upi-pad, .upi-taste,
+  .upi-zeigen, .upi-verbergen, .upi-wachsen { animation-duration: 1ms !important; animation-delay: 0s !important; }
+}

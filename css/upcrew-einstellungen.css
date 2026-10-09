@@ -1,0 +1,65 @@
+/* upcrew-einstellungen.css — Einstellungen und Verwaltung im selben Aufbau (gehört zu js/upcrew-einstellungen.js).
+   Entstanden in Blunderluck v0.156.0 (Entwurf Oberfläche Runde 7).
+   Farben aus der Farbwelt (--gefahr mit Rückfall), Rundungen nur über die Variablen. */
+
+.up-es-abschnitt { margin-top: 14px; }
+.up-es-abschnitt:first-child { margin-top: 0; }
+.up-es-abschnitt > h3 { font-size: .74rem; letter-spacing: .06em; text-transform: uppercase; color: var(--schrift-leise);
+  margin: 0 4px 6px; display: flex; align-items: center; gap: 6px; }
+.up-es-abschnitt > h3 .up-es-marke { text-transform: none; letter-spacing: 0; }
+.up-es-gruppe { background: var(--karte); border: 1px solid var(--rahmen); border-radius: var(--rund-mittel); overflow: hidden; }
+
+.up-es-zeile { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 50px; padding: 8px 12px; margin: 0;
+  border: 0; border-top: 1px solid var(--rahmen); border-radius: 0; background: none; color: var(--schrift);
+  font: inherit; text-align: left; box-shadow: none; }
+.up-es-gruppe > .up-es-zeile:first-child { border-top: 0; }
+button.up-es-zeile { cursor: pointer; }
+button.up-es-zeile:active { background: var(--karte-leise); }
+button.up-es-zeile:focus-visible { outline: 2px solid var(--haupt); outline-offset: -2px; }
+.up-es-zeichen { width: 22px; height: 22px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.up-es-zeile > .up-es-zeichen:first-child { color: var(--haupt); }
+.up-es-klein { width: 16px; height: 16px; }
+.up-es-text { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.up-es-text b { font-size: .92rem; overflow-wrap: anywhere; }
+.up-es-text small { color: var(--schrift-leise); font-size: .74rem; }
+.up-es-tag { margin-left: 2px; font-size: .74rem; font-weight: 700; color: var(--schrift-leise); }
+.up-es-wert { color: var(--schrift-leise); font-size: .82rem; font-weight: 700; white-space: nowrap; display: inline-flex; align-items: center; }
+.up-es-gefahr { color: var(--gefahr, #d93a2f); justify-content: center; font-weight: 800; }
+.up-es-gefahr .up-es-text { flex: none; text-align: center; }
+
+.up-es-marke { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; margin-left: 4px; border-radius: var(--rund-voll);
+  font-size: .68rem; font-weight: 900; background: color-mix(in srgb, var(--haupt) 18%, transparent); color: var(--schrift); }
+.up-es-abschnitt > h3 > .up-es-marke { margin-left: 0; }
+.up-es-hinweis { font-size: .74rem; color: var(--schrift-leise); margin: 6px 6px 0; line-height: 1.35; }
+
+.up-es-schalter { position: relative; width: 46px; height: 28px; flex: none; padding: 0; margin: 0; cursor: pointer;
+  border-radius: var(--rund-voll); background: var(--karte-leise); border: 1px solid var(--rahmen); box-shadow: none; }
+.up-es-schalter::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: var(--rund-voll);
+  background: var(--schrift-leise); transition: transform 180ms, background 180ms; }
+.up-es-schalter[aria-checked="true"] { background: color-mix(in srgb, var(--haupt) 40%, var(--karte-leise)); }
+.up-es-schalter[aria-checked="true"]::after { transform: translateX(18px); background: var(--haupt); }
+
+.up-es-segment { display: flex; flex: none; background: var(--karte-leise); border-radius: var(--rund-klein); padding: 3px; gap: 2px; }
+.up-es-wahl { flex: 1; margin: 0; border: 0; background: none; box-shadow: none; color: var(--schrift-leise); font: inherit; font-weight: 800;
+  font-size: .76rem; padding: 6px 8px; border-radius: var(--rund-klein); cursor: pointer; white-space: nowrap; min-height: 0; }
+.up-es-wahl.up-es-aktiv { background: var(--karte); color: var(--schrift); box-shadow: 0 2px 0 var(--rahmen); }
+
+/* Zahnrad: gefüllt (evenodd stanzt das Loch), gefärbt über currentColor. */
+.up-es-gefuellt, .up-bl-kopf-knopf svg.up-es-gefuellt { fill: currentColor; stroke: none; }
+.up-es-zahnrad { display: inline-grid; place-items: center; cursor: pointer; }
+.up-es-zahnrad:not(.up-bl-kopf-knopf) { width: 44px; height: 44px; padding: 0; margin: 0; border: 0; border-radius: var(--rund-voll);
+  background: none; color: var(--schrift); box-shadow: none; }
+.up-es-zahnrad:focus-visible { outline: 2px solid var(--haupt); outline-offset: 2px; }
+
+/* Status-Lampe (Speicher): grün gespeichert · gelb wartet · grau offline (ruhig, keine Warnfarbe). */
+.up-es-lampe { gap: 7px; color: var(--schrift); }
+.up-es-lampe i { width: 10px; height: 10px; flex: none; border-radius: var(--rund-voll); background: var(--up-es-lampe-farbe);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--up-es-lampe-farbe) 28%, transparent); }
+.up-es-lampe[data-zustand="gespeichert"] { --up-es-lampe-farbe: var(--gut, #2fa84f); }
+.up-es-lampe[data-zustand="wartet"] { --up-es-lampe-farbe: var(--warnung, #e2a300); }
+.up-es-lampe[data-zustand="wartet"] i { animation: up-es-lampe-puls 1.2s ease-in-out infinite; }
+.up-es-lampe[data-zustand="offline"] { --up-es-lampe-farbe: var(--schrift-leise, #8a8a8a); }
+@keyframes up-es-lampe-puls { 50% { opacity: .45; } }
+
+@media (prefers-reduced-motion: reduce) { .up-es-schalter::after { transition: none; } .up-es-lampe i { animation: none !important; } }
+@media (max-width: 379px) { .up-es-zeile { gap: 8px; padding: 8px 10px; } .up-es-wahl { padding: 6px 6px; } }

@@ -1,0 +1,52 @@
+/*
+ * upcrew-offline.css — dezenter Offline-Hinweis (zu js/upcrew-offline.js).
+ *
+ * <anker class="up-of-anker">
+ *   <button class="up-of up-of-ecke-unten-links|rechts" data-zustand="aus|offline|hochgeladen">
+ *     <span class="up-platz … up-of-platz-offline"/> <span class="up-platz … up-of-platz-hochgeladen"/>
+ *   </button>
+ *   <span class="up-of-blase up-of-blase-<ecke>">…</span>     (nur nach Tipp aufs Zeichen)
+ * Ruhig: Karten-Grund, Rahmen-Linie, leise Schrift — keine Warnfarbe, keine Dauer-Bewegung. Nichts rollt waagrecht.
+ */
+.up-of-anker { position: relative; }
+
+.up-of { position: absolute; z-index: 2; box-sizing: border-box; display: inline-flex; align-items: center;
+  justify-content: center; height: 22px; min-width: 22px; margin: 0; padding: 0 2px; border: 2px solid var(--flaeche);
+  border-radius: 999px; background: var(--karte); color: var(--schrift-leise); box-shadow: 0 0 0 1px var(--rahmen);
+  font: inherit; line-height: 1; cursor: pointer; opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity 260ms ease, visibility 0s 260ms; -webkit-tap-highlight-color: transparent; }
+.up-of[data-zustand="offline"], .up-of[data-zustand="hochgeladen"] { opacity: 1; visibility: visible;
+  pointer-events: auto; transition: opacity 260ms ease, visibility 0s; }
+/* Fingerfläche 38 px, ohne das Aussehen zu vergrössern. */
+.up-of::before { content: ""; position: absolute; inset: -8px; }
+.up-of:focus-visible { outline: 2px solid var(--haupt); outline-offset: 2px; }
+
+.up-of .up-of-platz { --up-pl-breite: 14px; width: 14px; flex: none; }
+.up-of .up-of-platz svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.4;
+  stroke-linecap: round; stroke-linejoin: round; }
+.up-of .up-of-platz-hochgeladen { display: none; }
+.up-of[data-zustand="hochgeladen"] { color: var(--haupt); }
+.up-of[data-zustand="hochgeladen"] .up-of-platz-offline { display: none; }
+.up-of[data-zustand="hochgeladen"] .up-of-platz-hochgeladen { display: inline-grid; }
+
+/* unten-links: am Kreis der Start-Kopfzeile (oben links Flamme, unten rechts Level sind belegt).
+   rechts: im Kopf des Spiel-Bildschirms, nie über dem Feld. */
+.up-of-ecke-unten-links { left: -6px; bottom: -6px; }
+.up-of-ecke-rechts { right: 0; top: 50%; transform: translateY(-50%); }
+
+/* Die Sprechblase — nur nach einem Tipp aufs Zeichen; klein, höchstens 240 px breit. */
+.up-of-blase { position: absolute; z-index: 5; display: grid; gap: 2px; width: max-content; max-width: min(240px, 80vw);
+  padding: 7px 10px; font-size: .74rem; line-height: 1.25; color: var(--schrift); background: var(--karte);
+  border: 1px solid var(--rahmen); border-radius: 10px; box-shadow: 0 4px 14px rgb(0 0 0 / .18); }
+.up-of-blase strong { font-weight: 900; }
+.up-of-blase span { color: var(--schrift-leise); }
+.up-of-blase-unten-links { left: -6px; top: calc(100% + 10px); }
+/* rechts: die Blase steht links neben dem Zeichen im Kopf, nie über dem Feld. */
+.up-of-blase-rechts { right: 30px; top: 50%; transform: translateY(-50%); max-width: min(240px, calc(100vw - 90px)); }
+
+/* Für Vorleser: still, aber da. */
+.up-of-ansage { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  .up-of, .up-of[data-zustand] { transition: none; }
+}

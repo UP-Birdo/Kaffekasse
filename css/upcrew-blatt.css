@@ -1,0 +1,132 @@
+/* upcrew-blatt.css — Blätter und Karten über dem sichtbaren Hauptmenü (gehört zu js/upcrew-blatt.js).
+   Entstanden in Blunderluck v0.156.0 (Entwurf Oberfläche Runde 7).
+   Die App setzt: --up-bl-oben (wo das Blatt beginnt, unter dem Kopf), --up-bl-unten (Höhe der Leiste),
+   --up-bl-ebene (z-index; die Leiste der App liegt darüber und bleibt bedienbar). Farben aus der Farbwelt.
+
+   29.09.2026: Blätter nur noch für Bereiche OHNE Leisten-Knopf (Profil, Einstellungen, Verwaltung, Serie, Freunde,
+   Verlauf); Leisten-Tabs sind Seiten (Abschnitt SEITEN unten). Scroll-Fehler „oben kommen die Menüs wieder“: Die Seite
+   hinter dem Blatt rollte mit, weil nichts sie festhielt — jetzt `html.up-bl-offen` (Regeln unten), keine Kette vom
+   Blatt auf die Seite, kein Gummiband. Dieselbe Lehre wie Blunderluck `body.dialog-offen` (v0.108). */
+
+/* ---- SEITEN (Leisten-Tabs): das Dokument rollt, Kopf-Streifen und Leiste stehen fest ----
+   Kein Gummiband an Ober- und Unterkante: sonst zieht das Dokument über das Ende hinaus und zeigt kurz den Grund bzw.
+   schiebt Inhalt unter den festen Streifen oben. Seitlich galt das schon (Nutzer 27.09.2026 „rechts und links Stopp“). */
+html { overscroll-behavior: none; }
+
+/* Wahlfrei: ein Kopf, der beim Rollen oben stehen bleibt (unter dem iPhone-Streifen). Deckend und mit eigener
+   Ebenen-Nummer — „ein Hintergrund macht keine Ebene“: ohne z-index zeichnet sich Inhalt mit z-index darüber.
+   Unter den Blättern (--up-bl-ebene 40) und der Leiste (App, 50). */
+.up-seite-kopf {
+  position: sticky;
+  top: var(--oben-frei, 0px);
+  z-index: var(--up-seite-kopf-ebene, 30);
+  background: var(--flaeche);
+}
+
+/* ---- Offen: die Seite steht still (upcrew-blatt.js setzt die Klasse an <html> und <body>) ---- */
+html.up-bl-offen,
+html.up-bl-offen body {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+/* Wo nichts rollt (Grund, Kopf des Blatts), rollt auch nichts dahinter — gerade am iPhone. Tipps gehen weiter. */
+.up-bl-grund,
+.up-bl-kopf { touch-action: none; }
+
+.up-bl-dahinter {
+  transform: scale(.94) translateY(6px);
+  transform-origin: 50% 0;
+  filter: brightness(.72) saturate(.9);
+  pointer-events: none;
+  transition: transform 260ms cubic-bezier(.3, 1.2, .5, 1), filter 260ms;
+}
+
+.up-bl-ebene {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: var(--up-bl-unten, 64px);
+  z-index: var(--up-bl-ebene, 40);
+}
+
+.up-bl-karte-ebene { bottom: 0; z-index: calc(var(--up-bl-ebene, 40) + 20); }
+
+.up-bl-grund { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.32); animation: up-bl-ein 200ms ease-out; }
+.up-bl-oben-drauf .up-bl-grund { background: rgba(0, 0, 0, 0.18); }
+
+.up-bl-blatt {
+  position: absolute;
+  left: max(8px, calc((100% - 820px) / 2));
+  right: max(8px, calc((100% - 820px) / 2));
+  top: var(--up-bl-oben, 92px);
+  bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  background: var(--flaeche);
+  color: var(--schrift);
+  border: 1px solid var(--rahmen);
+  border-radius: var(--rund-mittel);
+  box-shadow: 0 -4px 0 var(--rahmen);
+  overflow: hidden;
+  animation: up-bl-hoch 260ms cubic-bezier(.3, 1.2, .5, 1);
+}
+
+.up-bl-oben-drauf .up-bl-blatt {
+  top: calc(var(--up-bl-oben, 92px) + 14px);
+  left: max(14px, calc((100% - 808px) / 2));
+  right: max(14px, calc((100% - 808px) / 2));
+}
+
+.up-bl-kopf { display: flex; align-items: center; gap: 8px; padding: 12px 12px 8px; flex: none; }
+.up-bl-titel { flex: 1; min-width: 0; margin: 0; font-size: 1.12rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.up-bl-kopf-knopf {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  cursor: pointer;
+  color: var(--schrift);
+  background: var(--karte);
+  border: 1px solid var(--rahmen);
+  border-radius: var(--rund-klein);
+}
+.up-bl-kopf-knopf svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+.up-bl-inhalt { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 0 12px 14px; overscroll-behavior: contain;
+  touch-action: pan-y pinch-zoom; }
+
+.up-bl-karte {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(340px, calc(100% - 32px));
+  max-height: calc(100% - 48px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  transform: translate(-50%, -50%);
+  padding: 16px;
+  color: var(--schrift);
+  background: var(--karte);
+  border: 1px solid var(--rahmen);
+  border-radius: var(--rund-mittel);
+  box-shadow: 0 6px 0 var(--rahmen);
+  animation: up-bl-auf 220ms cubic-bezier(.3, 1.3, .5, 1);
+}
+
+/* Die Fläche nimmt beim Öffnen den Fokus (tabindex -1, 04.10.2026) — sie ist kein Bedienelement, also kein Ring. */
+.up-bl-blatt:focus,
+.up-bl-karte:focus { outline: none; }
+
+@keyframes up-bl-ein { from { opacity: 0; } }
+@keyframes up-bl-hoch { from { transform: translateY(46px); opacity: 0; } }
+@keyframes up-bl-auf { from { transform: translate(-50%, -46%) scale(.94); opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .up-bl-dahinter { transition: none; }
+  .up-bl-blatt, .up-bl-karte, .up-bl-grund { animation: none; }
+}

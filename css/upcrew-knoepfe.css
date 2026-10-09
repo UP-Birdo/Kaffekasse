@@ -1,0 +1,98 @@
+/*
+ * upcrew-knoepfe.css — die Knopf-Familien K1–K6 für Blunderluck und Typoluck.
+ * Gemeinsamer Baustein — nie in einer App abwandeln.
+ *
+ * WIE ES WIRKT: `data-knoepfe="K1".."K6"` an einem Element (upcrew-aussehen.js setzt es an <html>, die Vorschau im
+ * Anpassen-Tab an sich selbst) setzt NUR Variablen. Variablen erben vom nächsten Vorfahren — deshalb kann die
+ * Vorschau eine andere Familie zeigen als die App drumherum, ohne dass sich Regeln beißen.
+ *
+ * Ein Knopf:   <button class="up-kn up-haupt">…</button>   (up-zweit, up-gefahr; up-rund = nur Symbol, 44×44)
+ *              optional <i class="up-led"></i> als erstes Kind (leuchtet bei K3)
+ * Braucht die Farbwelt-Variablen (--haupt, --haupt-kante, --haupt-schrift, --karte, --karte-leise, --still-kante,
+ * --schrift, --taste, --taste-kante) und --gefahr, --gefahr-kante, --gefahr-schrift.
+ */
+
+:root, [data-knoepfe="K1"] {   /* K1 Stufe — Vorbild Duolingo; Kante schräg, Lichtkante oben */
+  --kn-radius: 14px; --kn-rand: 0px; --kn-tiefe: 4px; --kn-x: 2px; --kn-licht: 1;
+  --kn-zweiton: 0; --kn-dunkel: 0; --kn-stempel: 0; --kn-taste: 0; --kn-kapsel: 0;
+  --kn-schreibweise: none; --kn-sperrung: 0; --kn-groesse: .98rem; --kn-led: none;
+}
+[data-knoepfe="K2"] {          /* K2 Kissen — Vorbild Supercell; Zwei-Ton statt Glanz, dunkler Umriss */
+  --kn-radius: 12px; --kn-rand: 2px; --kn-tiefe: 5px; --kn-x: 0px; --kn-licht: 0;
+  --kn-zweiton: 1; --kn-dunkel: 1; --kn-stempel: 0; --kn-taste: 0; --kn-kapsel: 0;
+  --kn-schreibweise: uppercase; --kn-sperrung: .03em; --kn-groesse: .98rem; --kn-led: none;
+}
+[data-knoepfe="K3"] {          /* K3 Taste — Vorbild K.O. II; Leuchtpunkt, kleine Versalien */
+  --kn-radius: 14px; --kn-rand: 0px; --kn-tiefe: 3px; --kn-x: 0px; --kn-licht: 0;
+  --kn-zweiton: 0; --kn-dunkel: 0; --kn-stempel: 0; --kn-taste: 1; --kn-kapsel: 0;
+  --kn-schreibweise: uppercase; --kn-sperrung: .09em; --kn-groesse: .78rem; --kn-led: block;
+}
+[data-knoepfe="K4"] {          /* K4 Stempel — Vorbild Neo-Brutalismus; Umriss + Schatten in Schriftfarbe, nur nach unten */
+  --kn-radius: 14px; --kn-rand: 2.5px; --kn-tiefe: 4px; --kn-x: 0px; --kn-licht: 0;
+  --kn-zweiton: 0; --kn-dunkel: 0; --kn-stempel: 1; --kn-taste: 0; --kn-kapsel: 0;
+  --kn-schreibweise: none; --kn-sperrung: 0; --kn-groesse: .98rem; --kn-led: none;
+}
+[data-knoepfe="K5"] {          /* K5 Kapsel — Vorbild Switch/iOS; Symbol in eigener Kapsel */
+  --kn-radius: 999px; --kn-rand: 0px; --kn-tiefe: 3px; --kn-x: 0px; --kn-licht: 0;
+  --kn-zweiton: 0; --kn-dunkel: 0; --kn-stempel: 0; --kn-taste: 0; --kn-kapsel: 1;
+  --kn-schreibweise: none; --kn-sperrung: 0; --kn-groesse: .98rem; --kn-led: none;
+}
+[data-knoepfe="K6"] {          /* K6 Ecke — Vorbild Material 3 Expressive; nur oben rechts kantig */
+  --kn-radius: 14px 4px 14px 14px; --kn-rand: 0px; --kn-tiefe: 3px; --kn-x: 0px; --kn-licht: 0;
+  --kn-zweiton: 0; --kn-dunkel: 0; --kn-stempel: 0; --kn-taste: 0; --kn-kapsel: 0;
+  --kn-schreibweise: none; --kn-sperrung: 0; --kn-groesse: .98rem; --kn-led: none;
+}
+
+.up-kn {
+  --kf: color-mix(in srgb, var(--taste) calc(var(--kn-taste) * 100%), var(--karte-leise));
+  --kk: color-mix(in srgb, var(--taste-kante) calc(var(--kn-taste) * 100%), var(--still-kante));
+  --ks: var(--schrift);
+  /* Kante unten: K4 in Schriftfarbe, K2 dunkler */
+  --kn-kante: color-mix(in srgb, var(--schrift) calc(var(--kn-stempel) * 100%),
+              color-mix(in srgb, var(--kk) calc(100% - var(--kn-dunkel) * 25%), #000));
+  position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: calc(44px + var(--kn-taste) * 4px);
+  padding: 0 16px 0 calc(16px + var(--kn-taste) * 8px);
+  font: inherit; font-weight: 700; font-size: var(--kn-groesse); cursor: pointer;
+  text-transform: var(--kn-schreibweise); letter-spacing: var(--kn-sperrung);
+  color: var(--ks);
+  background: linear-gradient(to bottom,
+    color-mix(in srgb, var(--kf) calc(100% - var(--kn-zweiton) * 14%), #fff) 0 48%, var(--kf) 48% 100%);
+  border: var(--kn-rand) solid color-mix(in srgb, var(--schrift) calc(var(--kn-stempel) * 100%),
+          color-mix(in srgb, var(--kk) 65%, #000));
+  border-radius: var(--kn-radius);
+  box-shadow: var(--kn-x) var(--kn-tiefe) 0 var(--kn-kante),
+              0 0 0 calc(var(--kn-taste) * 1px) var(--kk),
+              inset 0 1.5px 0 rgb(255 255 255 / calc(var(--kn-licht) * 28%));
+  margin-bottom: var(--kn-tiefe);
+  transition: transform 70ms ease-out, box-shadow 70ms ease-out;
+  -webkit-tap-highlight-color: transparent;
+}
+.up-kn.up-haupt  { --kf: var(--haupt);  --kk: var(--haupt-kante);  --ks: var(--haupt-schrift); }
+.up-kn.up-gefahr { --kf: var(--gefahr); --kk: var(--gefahr-kante); --ks: var(--gefahr-schrift); }
+/* K2: helle Schrift mit Kante auf Haupt/Gefahr */
+.up-kn.up-haupt, .up-kn.up-gefahr {
+  color: color-mix(in srgb, #fff calc(var(--kn-zweiton) * 100%), var(--ks));
+  text-shadow: 0 2px 0 rgb(0 0 0 / calc(var(--kn-zweiton) * 28%));
+}
+.up-kn:active:not(:disabled) {
+  transform: translate(var(--kn-x), var(--kn-tiefe));
+  box-shadow: 0 0 0 var(--kn-kante), 0 0 0 calc(var(--kn-taste) * 1px) var(--kk),
+              inset 0 1.5px 0 rgb(255 255 255 / calc(var(--kn-licht) * 28%));
+}
+.up-kn:disabled { opacity: .42; cursor: not-allowed; }
+.up-kn:focus-visible { outline: 3px solid var(--haupt); outline-offset: 3px; }
+.up-kn.up-rund { width: calc(44px + var(--kn-taste) * 4px); padding: 0; }
+
+/* K5: Symbol vor Text in eigener Kapsel */
+.up-kn:not(.up-rund) > svg:first-of-type {
+  box-sizing: content-box; padding: calc(var(--kn-kapsel) * 5px); margin-left: calc(var(--kn-kapsel) * -10px);
+  border-radius: 999px; background: color-mix(in srgb, var(--ks) calc(var(--kn-kapsel) * 18%), transparent);
+}
+
+/* K3: Leuchtpunkt */
+.up-led { display: var(--kn-led); position: absolute; top: 8px; left: 9px; width: 6px; height: 6px; border-radius: 50%;
+  background: color-mix(in srgb, var(--ks) 30%, transparent); }
+.up-kn.up-rund .up-led { top: 7px; left: 7px; }
+.up-kn.up-haupt .up-led, .up-kn:active:not(:disabled) .up-led { background: #ffd2b8; box-shadow: 0 0 6px #ffb088; }
+.up-kn.up-zweit:active:not(:disabled) .up-led { background: var(--haupt); box-shadow: 0 0 6px var(--haupt); }

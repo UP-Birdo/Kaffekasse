@@ -1,0 +1,118 @@
+/*
+ * upcrew-platz.css — der Platz einer Grafik (zu js\upcrew-platz.js).
+ * Gemeinsamer Baustein: in die Apps KOPIEREN, nie abwandeln.
+ *
+ * <span class="up-platz [up-platz-leer | up-platz-eigen | up-platz-geliefert]" data-platz="…" data-mass="96x96">
+ *   up-platz-leer        schlichter Platzhalter: gestrichelter Rahmen, Kürzel
+ *   up-platz-eigen       der Platzhalter ist ein vorhandenes Zeichen (Münze, Farbton, „Ag“, Mini-Knopf)
+ *   up-platz-geliefert   eine gelieferte Datei (<img class="up-platz-bild">)
+ * Die BREITE setzt die Stelle, an der der Platz sitzt (`--up-pl-breite` oder `width`); die Höhe folgt dem
+ * Seitenverhältnis des Maßes (`--up-pl-verhaeltnis`, setzt das Skript). Farben nur aus der Farbwelt.
+ */
+.up-platz {
+    position: relative;
+    display: inline-grid;
+    flex: none;
+    place-items: center;
+    box-sizing: border-box;
+    width: var(--up-pl-breite, 48px);
+    max-width: 100%;
+    aspect-ratio: var(--up-pl-verhaeltnis, 1);
+    overflow: hidden;
+    line-height: 1;
+    vertical-align: middle;
+}
+
+.up-platz-leer {
+    border: 1.5px dashed var(--rahmen);
+    border-radius: var(--rund-klein, 8px);
+    background: var(--karte-leise);
+    color: var(--schrift-leise);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+}
+
+.up-platz-bild {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.up-platz-eigen > svg {
+    width: 100%;
+    height: 100%;
+}
+
+/* Farbton einer Farbwelt: Grund · Fläche · Akzent. */
+.up-platz-muster {
+    display: flex;
+    width: 82%;
+    height: 62%;
+    overflow: hidden;
+    border-radius: var(--rund-klein, 8px);
+    box-shadow: 0 0 0 1px var(--rahmen);
+}
+
+.up-platz-muster i {
+    flex: 1;
+}
+
+.up-platz-muster i:last-child {
+    flex: 1.3;
+}
+
+/* Schriftprobe. */
+.up-platz-aa {
+    font-size: calc(var(--up-pl-breite, 48px) * 0.5);
+    font-weight: 700;
+    color: var(--schrift);
+}
+
+/* Mini-Knopf in seiner Familie (upcrew-knoepfe.css). An die Platz-Breite gebunden (04.10.2026: bei 40 px war „Los“
+   mit 10 px Rand 40,8 px breit): der Rand wird in schmalen Plätzen kleiner (ab 50 px wie bisher 10 px). */
+.up-platz-mini {
+    max-width: 100%;
+}
+
+.up-platz-mini .up-kn {
+    --up-pl-kn-rand: min(10px, calc(var(--up-pl-breite, 48px) * 0.2));
+    box-sizing: border-box;
+    max-width: 100%;
+    min-height: 28px;
+    margin-bottom: var(--kn-tiefe);
+    padding: 0 var(--up-pl-kn-rand) 0 calc(var(--up-pl-kn-rand) + var(--kn-taste) * 6px);
+    font-size: calc(0.75rem - var(--kn-taste) * 0.12rem);
+    pointer-events: none;
+}
+
+.up-platz-mini .up-led {
+    top: 5px;
+    left: 6px;
+    width: 5px;
+    height: 5px;
+}
+
+/* „Plätze zeigen“: Name und Maß über jedem Platz (bleibt im Platz, nichts ragt heraus). */
+.up-platz-zeigen .up-platz {
+    outline: 1px solid var(--haupt);
+    outline-offset: -1px;
+}
+
+.up-platz-zeigen .up-platz::after {
+    content: attr(data-platz) " " attr(data-mass);
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    overflow: hidden;
+    padding: 2px;
+    font: 700 7px/1.15 system-ui, sans-serif;
+    letter-spacing: 0;
+    text-align: left;
+    text-transform: none;
+    overflow-wrap: anywhere;
+    color: var(--schrift);
+    background: color-mix(in srgb, var(--flaeche) 82%, transparent);
+    pointer-events: none;
+}

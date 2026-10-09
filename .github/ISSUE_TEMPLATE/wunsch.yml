@@ -1,0 +1,24 @@
+name: Wunsch
+description: Etwas ergänzen oder ändern
+title: "[Wunsch] "
+labels: ["wunsch"]
+body:
+    - type: textarea
+      id: idee
+      attributes:
+          label: Was wünschst du dir?
+          placeholder: z. B. Beim Produkt eine Erinnerung, wenn seit drei Tagen niemand Milch geholt hat …
+      validations:
+          required: true
+    - type: input
+      id: stelle
+      attributes:
+          label: An welcher Stelle?
+          description: Füllt die App automatisch aus, wenn der Wunsch von dort kommt.
+          placeholder: z. B. Kasse
+    - type: input
+      id: fassung
+      attributes:
+          label: Fassung
+          description: Version der App, aus der der Wunsch stammt.
+          placeholder: z. B. 0.5.0

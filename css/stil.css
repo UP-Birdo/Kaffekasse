@@ -1,0 +1,844 @@
+/*
+ * stil.css — der eigene Stil von Kaffekasse. Nur Rückfall-Werte und Aufbau; Farben,
+ * Schrift und Knöpfe kommen aus den Studio-Bausteinen (upcrew-farbwelten.js setzt die
+ * Farbwelt-Variablen an <html>, upcrew-aussehen.js die Schrift, upcrew-knoepfe.css die
+ * Knopf-Familie).
+ *
+ * UPCrew-Standard: drei Rundungen (--rund-klein/-mittel/-voll), Schatten nur als harte
+ * Kante (kein Weichzeichner), Schrift nur über --schrift-familie. Ein Test
+ * zählt feste Rundungen und weiche Schatten in dieser Datei.
+ */
+
+:root {
+    /* Rückfall, falls ein Baustein fehlt — im Betrieb überschreibt die Farbwelt alles. */
+    --flaeche: #141414;
+    --karte: #222222;
+    --karte-leise: #2c2c2c;
+    --rahmen: #3a3a3a;
+    --schrift: #f2f2f2;
+    --schrift-leise: #9c9c9c;
+    --haupt: #ececec;
+    --haupt-schrift: #141414;
+    --haupt-kante: #a8a8a8;
+    --still-kante: #0b0b0b;
+    --taste: var(--karte-leise);
+    --taste-kante: var(--still-kante);
+    --taste-schrift: var(--schrift);
+
+    /* Bedeutungsfarben (die Farbwelt lässt sie unberührt). */
+    --gefahr: #d64545;
+    --gefahr-kante: #8f2a2a;
+    --gefahr-schrift: #ffffff;
+    --gut: #39c178;
+    --warnung: #f0b43a;
+
+    /* Die drei Rundungen und die harte Kante (UPCrew-Standard, Werte aus Typoluck 0.4.0). */
+    --rund-klein: 8px;
+    --rund-mittel: 14px;
+    --rund-voll: 999px;
+    --karte-tiefe: 3px;
+
+    /* Schrift: der Aussehen-Baustein setzt --schrift-familie an <html>; dies ist der Rückfall. */
+    --schrift-familie: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+
+    /* Ebenen und Maße, die die Bausteine lesen. */
+    --ebene-intro: 95;
+    --leiste-hoehe: 64px;
+    --up-bl-oben: 56px;
+    --up-bl-unten: var(--leiste-hoehe);
+    --up-bl-ebene: 40;
+    --oben-frei: env(safe-area-inset-top, 0px);
+}
+
+/* ---------- Grundgerüst ---------- */
+
+/* Wie in den Spielen: Breiten schließen Rand und Innenabstand ein. Die Bausteine verlassen
+   sich darauf (z. B. `.up-es-zeile { width: 100%; padding: … }`) — ohne diese Regel ragten
+   die Zeilen der Einstellungen bei 375 px um 20 px über die Gruppe hinaus (0.1.1). */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: var(--flaeche);
+    color: var(--schrift);
+    font-family: var(--schrift-familie);
+    -webkit-text-size-adjust: 100%;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+    overflow: hidden;
+}
+
+/* Das Band füllt den Platz zwischen Oberkante und Leiste (der Baustein setzt 100vh als Vorgabe). */
+.up-band {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: auto;
+}
+
+.up-band-seite {
+    padding: var(--oben-frei) 14px 14px;
+}
+
+.up-leiste {
+    z-index: 50;
+    flex: none;
+}
+
+button {
+    font-family: inherit;
+}
+
+/* ---------- Kopf einer Seite ---------- */
+
+.kopf {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-height: 44px;
+    padding: 6px 0 10px;
+}
+
+.kopf-name {
+    font-size: 1.25rem;
+    font-weight: 700;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.kopf-name:empty::before {
+    content: "\2014";
+    color: var(--schrift-leise);
+}
+
+/* Der Anker des Offline-Zeichens: ein leerer Platz rechts im Kopf. */
+.kopf-rechts {
+    flex: none;
+    width: 32px;
+    height: 32px;
+}
+
+.seite-titel {
+    margin: 6px 4px 12px;
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+/* ---------- Karten ---------- */
+
+.karte {
+    background: var(--karte);
+    border: 1px solid var(--rahmen);
+    border-radius: var(--rund-mittel);
+    box-shadow: 0 var(--karte-tiefe) 0 var(--still-kante);
+    padding: 14px;
+    margin-bottom: 14px;
+}
+
+/* ---------- Zustände (zustand.js) ---------- */
+
+.zs {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 18px 8px;
+    text-align: center;
+    color: var(--schrift-leise);
+}
+
+.zs p {
+    margin: 0;
+    font-weight: 700;
+    color: var(--schrift);
+}
+
+.zs-zeichen {
+    width: 32px;
+    height: 32px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.zs-laden {
+    align-items: stretch;
+}
+
+.zs-balken {
+    height: 14px;
+    border-radius: var(--rund-klein);
+    background: var(--karte-leise);
+    animation: zs-puls 1.4s ease-in-out infinite;
+}
+
+.zs-balken:nth-child(2) { width: 80%; }
+.zs-balken:nth-child(3) { width: 60%; }
+
+@keyframes zs-puls {
+    0%, 100% { opacity: .55; }
+    50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .zs-balken { animation: none; }
+}
+
+/* ---------- Dialog-Karten (dialog.js) ---------- */
+
+.dlg-grund {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgb(0 0 0 / .55);
+}
+
+.dlg-karte {
+    width: min(100%, 360px);
+    background: var(--karte);
+    color: var(--schrift);
+    border: 1px solid var(--rahmen);
+    border-radius: var(--rund-mittel);
+    box-shadow: 0 var(--karte-tiefe) 0 var(--still-kante);
+    padding: 16px;
+    outline: none;
+}
+
+.dlg-titel {
+    margin: 0 0 8px;
+    font-size: 1.1rem;
+}
+
+.dlg-inhalt p {
+    margin: 0 0 12px;
+    color: var(--schrift-leise);
+}
+
+.dlg-feld,
+.feld {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 44px;
+    padding: 8px 12px;
+    margin: 0 0 12px;
+    font: inherit;
+    color: var(--schrift);
+    background: var(--flaeche);
+    border: 1px solid var(--rahmen);
+    border-radius: var(--rund-klein);
+}
+
+.dlg-feld:focus,
+.feld:focus {
+    outline: 2px solid var(--haupt);
+    outline-offset: -1px;
+}
+
+.dlg-knoepfe {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.dlg-scharf {
+    outline: 2px solid var(--gefahr);
+    outline-offset: 2px;
+}
+
+/* ---------- Anmeldung (bildschirm-anmeldung.js) ---------- */
+
+.anmeldung {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    overflow-y: auto;
+    background: var(--flaeche);
+    padding: calc(var(--oben-frei) + 24px) 20px 24px;
+    box-sizing: border-box;
+}
+
+.anmeldung[hidden] {
+    display: none;
+}
+
+.anmeldung-innen {
+    width: min(100%, 380px);
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.anmeldung-titel {
+    margin: 10px 0 0;
+    font-size: 1.6rem;
+}
+
+.anmeldung-unter {
+    margin: 0 0 8px;
+    color: var(--schrift-leise);
+    font-weight: 700;
+}
+
+.anmeldung-wahl {
+    display: flex;
+    background: var(--karte-leise);
+    border-radius: var(--rund-voll);
+    padding: 3px;
+}
+
+.anmeldung-wahl button {
+    flex: 1;
+    min-height: 38px;
+    border: 0;
+    background: none;
+    color: var(--schrift-leise);
+    font: inherit;
+    font-weight: 700;
+    border-radius: var(--rund-voll);
+    cursor: pointer;
+}
+
+.anmeldung-wahl button[aria-checked="true"] {
+    background: var(--karte);
+    color: var(--schrift);
+    box-shadow: 0 2px 0 var(--still-kante);
+}
+
+.feld-zeile {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.feld-zeile label {
+    font-size: .8rem;
+    font-weight: 700;
+    color: var(--schrift-leise);
+}
+
+.feld-zeile .feld {
+    margin: 0;
+}
+
+.feld-fehler {
+    min-height: 1.2em;
+    font-size: .85rem;
+    font-weight: 700;
+    color: var(--gefahr);
+}
+
+.feld-fehler:empty {
+    display: none;
+}
+
+.feld-hinweis {
+    font-size: .8rem;
+    color: var(--schrift-leise);
+}
+
+.anmeldung-knoepfe {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 6px;
+}
+
+.anmeldung-auswahl {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.anmeldung[aria-busy="true"] button {
+    opacity: .6;
+    pointer-events: none;
+}
+
+/* ---------- Blatt „Anpassen" ---------- */
+
+.blatt-anpassen .up-bl-inhalt {
+    padding: 0;
+}
+
+/* ---------- Blätter der Kasse (bildschirm-kasse.js) ---------- */
+
+.blatt-abschnitt {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 6px 2px 18px;
+}
+
+.blatt-abschnitt-titel {
+    margin: 0;
+    font-size: .8rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--schrift-leise);
+}
+
+.blatt-knoepfe {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 4px;
+}
+
+[aria-busy="true"] .blatt-knoepfe button {
+    opacity: .6;
+    pointer-events: none;
+}
+
+.code-gross {
+    font-size: 2.2rem;
+    font-weight: 700;
+    letter-spacing: .18em;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    padding: 10px 0 4px;
+}
+
+.code-unter {
+    margin: 0 0 14px;
+    text-align: center;
+    color: var(--schrift-leise);
+    font-weight: 700;
+    font-size: .85rem;
+}
+
+/* ---------- Start: Kasse und Produktkarten (bildschirm-start.js) ---------- */
+
+.start-inhalt {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.kasse-kopf {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    min-height: 54px;
+    padding: 8px 12px;
+    font: inherit;
+    text-align: left;
+    color: var(--schrift);
+    background: var(--karte-leise);
+    border: 1px solid var(--rahmen);
+    border-radius: var(--rund-mittel);
+    cursor: pointer;
+}
+
+.kasse-kopf-text {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+
+.kasse-kopf-text b {
+    font-size: 1rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.kasse-kopf-text small {
+    font-size: .74rem;
+    font-weight: 700;
+    color: var(--schrift-leise);
+}
+
+.kasse-code {
+    flex: none;
+    font-weight: 700;
+    letter-spacing: .12em;
+    font-variant-numeric: tabular-nums;
+    color: var(--schrift-leise);
+}
+
+.produkt {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--karte);
+    border: 1px solid var(--rahmen);
+    border-radius: var(--rund-mittel);
+    box-shadow: 0 var(--karte-tiefe) 0 var(--still-kante);
+}
+
+.produkt-dran {
+    border-color: var(--haupt);
+}
+
+.produkt-bild {
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    overflow: hidden;
+    border-radius: var(--rund-klein);
+}
+
+.produkt-bild img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #ffffff;
+    border-radius: var(--rund-klein);
+}
+
+.produkt-bild .up-platz,
+.produkt-platz {
+    --up-pl-breite: 52px;
+}
+
+.produkt-kuerzel {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--schrift-leise);
+}
+
+.produkt-text {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+
+.produkt-name {
+    font-size: 1rem;
+    overflow-wrap: anywhere;
+}
+
+.produkt-dran-zeile {
+    font-size: .8rem;
+    font-weight: 700;
+    color: var(--haupt);
+    overflow-wrap: anywhere;
+}
+
+.produkt-dran .produkt-dran-zeile {
+    color: var(--schrift);
+}
+
+.produkt-zahlen {
+    font-size: .74rem;
+    font-weight: 700;
+    color: var(--schrift-leise);
+    font-variant-numeric: tabular-nums;
+}
+
+.produkt-plus {
+    font-size: 1.5rem;
+    line-height: 1;
+}
+
+.produkt-eben {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding-top: 6px;
+    border-top: 1px solid var(--rahmen);
+    font-size: .78rem;
+    font-weight: 700;
+    color: var(--schrift-leise);
+}
+
+.produkt-zurueck {
+    min-height: 34px;
+    font-size: .82rem;
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+
+.start-fuss {
+    display: flex;
+    justify-content: center;
+    padding: 4px 0 8px;
+}
+
+/* ---------- Produkt-Blatt: Scannen, Suchen, Vorschau (bildschirm-kasse.js) ---------- */
+
+.feld-reihe {
+    display: flex;
+    gap: 10px;
+}
+
+.feld-reihe button {
+    flex: 1;
+}
+
+.feld-reihe button[hidden] {
+    display: none;
+}
+
+.vorschau-produkt {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: var(--karte-leise);
+    border-radius: var(--rund-klein);
+}
+
+.vorschau-produkt img {
+    width: 56px;
+    height: 56px;
+    object-fit: contain;
+    background: #ffffff;
+    border-radius: var(--rund-klein);
+}
+
+.vorschau-produkt div {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+
+.vorschau-produkt small {
+    color: var(--schrift-leise);
+    font-weight: 700;
+}
+
+.scan {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--rund-mittel);
+    background: #000000;
+}
+
+.scan video {
+    display: block;
+    width: 100%;
+    max-height: 260px;
+    object-fit: cover;
+}
+
+.scan-abbrechen {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    min-height: 36px;
+}
+
+/* ---------- Verlauf und Übersicht (bildschirm-verlauf.js) ---------- */
+
+.verlauf-schalter {
+    display: flex;
+    margin-bottom: 12px;
+}
+
+.verlauf-schalter .up-es-segment {
+    flex: 1;
+}
+
+.uebersicht {
+    display: grid;
+    gap: 8px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    background: var(--karte);
+    border: 1px solid var(--rahmen);
+    border-radius: var(--rund-mittel);
+    box-shadow: 0 var(--karte-tiefe) 0 var(--still-kante);
+}
+
+.uebersicht-kopf {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+    min-width: 0;
+}
+
+.uebersicht-kopf b {
+    font-size: 1rem;
+    overflow-wrap: anywhere;
+}
+
+.uebersicht-kopf span {
+    flex: none;
+    font-size: .8rem;
+    font-weight: 700;
+    color: var(--schrift-leise);
+    font-variant-numeric: tabular-nums;
+}
+
+.balken-zeile {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr) auto;
+    align-items: center;
+    gap: 10px;
+    font-size: .82rem;
+    font-weight: 700;
+    color: var(--schrift-leise);
+}
+
+.balken-ich {
+    color: var(--schrift);
+}
+
+.balken-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.balken {
+    display: block;
+    height: 10px;
+    overflow: hidden;
+    border-radius: var(--rund-voll);
+    background: var(--karte-leise);
+}
+
+.balken i {
+    display: block;
+    height: 100%;
+    border-radius: var(--rund-voll);
+    background: var(--haupt);
+}
+
+.balken-menge {
+    min-width: 1.6em;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.verlauf-tag {
+    margin: 14px 4px 6px;
+    font-size: .74rem;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--schrift-leise);
+}
+
+.verlauf-gruppe {
+    overflow: hidden;
+    background: var(--karte);
+    border: 1px solid var(--rahmen);
+    border-radius: var(--rund-mittel);
+}
+
+.verlauf-zeile {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    min-height: 50px;
+    padding: 8px 12px;
+    border-top: 1px solid var(--rahmen);
+}
+
+.verlauf-gruppe > .verlauf-zeile:first-child {
+    border-top: 0;
+}
+
+.verlauf-zeit {
+    font-size: .8rem;
+    font-weight: 700;
+    color: var(--schrift-leise);
+    font-variant-numeric: tabular-nums;
+}
+
+.verlauf-text {
+    display: grid;
+    gap: 1px;
+    min-width: 0;
+}
+
+.verlauf-text b {
+    font-size: .92rem;
+    overflow-wrap: anywhere;
+}
+
+.verlauf-text small {
+    font-size: .74rem;
+    font-weight: 700;
+    color: var(--schrift-leise);
+}
+
+.verlauf-zurueck .verlauf-text b {
+    text-decoration: line-through;
+    color: var(--schrift-leise);
+}
+
+.verlauf-knopf {
+    min-height: 34px;
+    font-size: .82rem;
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+
+.werkstatt-roh {
+    max-height: 240px;
+    margin: 0;
+    padding: 10px;
+    overflow: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-size: .72rem;
+    background: var(--karte-leise);
+    border-radius: var(--rund-klein);
+}
+
+/* ---------- Werkstatt (nur localhost, js/werkstatt.js) ---------- */
+
+.werkstatt {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 70;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 30px;
+    padding: 0 10px;
+    overflow: hidden;
+    white-space: nowrap;
+    font-size: .72rem;
+    font-weight: 700;
+    background: var(--warnung);
+    color: #141414;
+}
+
+.werkstatt button {
+    font: inherit;
+    padding: 2px 8px;
+    border: 1px solid #141414;
+    border-radius: var(--rund-voll);
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+}
+
+.werkstatt-offen .up-band-seite,
+.werkstatt-offen .anmeldung {
+    padding-top: calc(var(--oben-frei) + 34px);
+}

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#141414">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Kaffekasse">
+    <title>Kaffekasse</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="bilder/icon-180.png">
+
+    <!-- Notfall-Weg: braucht keine andere Datei. Kommt in 10 s kein Merker aus js/app.js
+         (window.KAFFEKASSE_GESTARTET), ist eine Datei nicht angekommen oder hängt —
+         dann steht statt eines leeren Bildschirms ein Knopf „Neu laden". Die Frist liegt
+         hinter dem spätesten Ende des Intros (rund 9 s, Baustein). -->
+    <script id="notfall">
+        (function () {
+            var FRIST_MS = 10000;
+            setTimeout(function () {
+                if (window.KAFFEKASSE_GESTARTET) {
+                    return;
+                }
+                var el = document.createElement("div");
+                el.setAttribute("style", "position:fixed;inset:0;z-index:999;display:flex;flex-direction:column;"
+                    + "align-items:center;justify-content:center;gap:16px;background:#141414;color:#f2f2f2;"
+                    + "font-family:system-ui,sans-serif;text-align:center;padding:24px");
+                var text = document.createElement("div");
+                text.textContent = "Kaffekasse startet nicht";
+                var knopf = document.createElement("button");
+                knopf.type = "button";
+                knopf.textContent = "Neu laden";
+                knopf.setAttribute("style", "font:inherit;font-weight:700;padding:12px 24px;border:0;"
+                    + "border-radius:14px;background:#ececec;color:#141414");
+                knopf.addEventListener("click", function () { location.reload(); });
+                el.appendChild(text);
+                el.appendChild(knopf);
+                document.body.appendChild(el);
+            }, FRIST_MS);
+        })();
+    </script>
+
+    <!-- Studio-Bausteine (Kopien aus der Quelle des Studios, nie hier ändern) -->
+    <link rel="stylesheet" href="css/upcrew-intro.css">
+    <link rel="stylesheet" href="css/upcrew-knoepfe.css">
+    <link rel="stylesheet" href="css/upcrew-platz.css">
+    <link rel="stylesheet" href="css/upcrew-anpassen.css">
+    <link rel="stylesheet" href="css/upcrew-leiste.css">
+    <link rel="stylesheet" href="css/upcrew-wischen.css">
+    <link rel="stylesheet" href="css/upcrew-blatt.css">
+    <link rel="stylesheet" href="css/upcrew-einstellungen.css">
+    <link rel="stylesheet" href="css/upcrew-offline.css">
+    <link rel="stylesheet" href="css/stil.css">
+
+    <!-- Aussehen VOR dem ersten Bild: Intro (Farbwelten), Farbwelt-Variablen, Aussehen, dann anwenden -->
+    <script src="js/upcrew-intro.js"></script>
+    <script src="js/upcrew-farbwelten.js"></script>
+    <script src="js/upcrew-aussehen.js"></script>
+    <script src="js/aussehen.js"></script>
+</head>
+<body>
+    <!-- Studio-Intro (Baustein) -->
+    <div id="intro" hidden></div>
+
+    <!-- Anmeldung: eine Schicht über der App, solange kein Konto angemeldet ist -->
+    <section id="anmeldung" class="anmeldung" aria-label="Anmeldung" hidden></section>
+
+    <!-- Das Seiten-Band: eine Seite je Tab, Wischen wechselt (Baustein upcrew-wischen) -->
+    <main class="up-band" id="band">
+        <section class="up-band-seite" data-up-seite="start" aria-label="Start"></section>
+        <section class="up-band-seite" data-up-seite="verlauf" aria-label="Verlauf"></section>
+        <section class="up-band-seite" data-up-seite="einstellungen" aria-label="Einstellungen"></section>
+    </main>
+
+    <!-- Tab-Leiste unten (Baustein upcrew-leiste); die Knöpfe baut js/navigation.js -->
+    <nav class="up-leiste" id="leiste" aria-label="Bereiche"></nav>
+
+    <!-- Blätter und Karten über der Seite (Baustein upcrew-blatt) -->
+    <div id="ebenen"></div>
+
+    <!-- Konfiguration zuerst, dann die übrigen Bausteine in der Reihenfolge ihrer Köpfe -->
+    <script src="js/konfig.js"></script>
+    <script src="js/upcrew-platz.js"></script>
+    <script src="js/upcrew-anpassen.js"></script>
+    <script src="js/upcrew-leiste.js"></script>
+    <script src="js/upcrew-wischen.js"></script>
+    <script src="js/upcrew-blatt.js"></script>
+    <script src="js/upcrew-einstellungen.js"></script>
+    <script src="js/upcrew-offline.js"></script>
+    <script src="js/konto.js"></script>
+    <script src="js/speicher.js"></script>
+    <script src="js/speicher-konten.js"></script>
+
+    <!-- Eigene Dateien -->
+    <script src="js/dialog.js"></script>
+    <script src="js/zustand.js"></script>
+    <script src="js/spieler.js"></script>
+    <script src="js/kasse.js"></script>
+    <script src="js/warteschlange.js"></script>
+    <script src="js/steuerung.js"></script>
+    <script src="js/produktsuche.js"></script>
+    <script src="js/scanner.js"></script>
+    <script src="js/navigation.js"></script>
+    <script src="js/bildschirm-anmeldung.js"></script>
+    <script src="js/bildschirm-kasse.js"></script>
+    <script src="js/bildschirm-start.js"></script>
+    <script src="js/bildschirm-verlauf.js"></script>
+    <script src="js/bildschirm-einstellungen.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

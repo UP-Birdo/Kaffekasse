@@ -1,0 +1,181 @@
+/*
+ * upcrew-anpassen.css — Tab „Anpassen“ (zu upcrew-anpassen.js). Alles unter .upa, nichts Globales.
+ * Gemeinsamer Baustein: in die Apps KOPIEREN, nie abwandeln. Seit Runde 8: VARIANTE A.
+ * NICHTS ROLLT WAAGRECHT (kein overflow-x): Kategorie-Kacheln im 2er-Raster, Stücke im Blatt im 3er-Raster.
+ * Farben: Farbwelt-Variablen der App; die Vorschau trägt eigene. Braucht upcrew-platz.css.
+ * --upa-oben: wie weit die klebende Vorschau oben Abstand hält (Höhe einer festen App-Kopfzeile), Standard 0.
+ */
+.upa { --upa-rund: var(--rund-mittel, 14px); --upa-klein: var(--rund-klein, 8px); display: block; }
+.upa-sym { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+.upa-vorschau-rahmen { position: sticky; top: var(--upa-oben, 0px); z-index: 2; background: var(--flaeche);
+  padding: 6px 14px 12px; border-bottom: 1px solid var(--rahmen); }
+.upa-leiste { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; min-width: 0; }
+.upa-leiste:not(:has(> :not([hidden]))) { display: none; }
+.upa-leiste .upa-zufall { margin-left: auto; margin-bottom: var(--kn-tiefe); }
+.upa-zufall .up-platz { --up-pl-breite: 22px; }
+.upa-mini-seg { display: inline-flex; background: var(--karte-leise); border-radius: 999px; padding: 3px; }
+.upa-mini-seg button { font: inherit; font-size: .78rem; font-weight: 700; border: 0; background: none; color: var(--schrift-leise);
+  padding: 5px 10px; border-radius: 999px; cursor: pointer; }
+.upa-mini-seg button[aria-pressed="true"] { background: var(--karte); color: var(--schrift); box-shadow: 0 2px 0 var(--still-kante); }
+.upa-hinweis { display: inline-flex; align-items: center; gap: 4px; min-width: 0; font-size: .72rem; font-weight: 700; color: var(--haupt);
+  background: color-mix(in srgb, var(--haupt) 14%, transparent); padding: 4px 8px; border-radius: 999px; }
+.upa-hinweis[hidden] { display: none; }
+.upa-hinweis .up-platz { --up-pl-breite: 14px; }
+.upa-hinweis .upa-sym { stroke-width: 2.6; }
+
+.upa-vorschau { background: var(--flaeche); color: var(--schrift); border: 2px solid var(--rahmen); border-radius: var(--upa-rund);
+  padding: 12px; display: flex; flex-direction: column; gap: 10px; height: auto; min-height: 280px; overflow: hidden; pointer-events: none; }
+.upa-vorschau.upa-neu { animation: upa-neu 220ms ease-out; }
+@keyframes upa-neu { from { opacity: .55; } to { opacity: 1; } }
+.upa-v-kopf { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; min-width: 0; }
+.upa-v-kopf b { font-size: 1.3rem; }
+.upa-v-kopf span { min-width: 0; color: var(--schrift-leise); font-size: .85rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; text-align: right; }
+.upa-brett { display: flex; flex-direction: column; gap: 5px; align-items: center; }
+.upa-brett div { display: flex; gap: 5px; }
+.upa-kachel { width: 36px; height: 36px; display: grid; place-items: center; font-weight: 700; font-size: 1.15rem;
+  border-radius: var(--upa-klein); color: var(--kachel-schrift); }
+.upa-kachel.richtig { background: var(--kachel-richtig); box-shadow: 0 3px 0 var(--kachel-richtig-kante); }
+.upa-kachel.vorhanden { background: var(--kachel-vorhanden); box-shadow: 0 3px 0 var(--kachel-vorhanden-kante); }
+.upa-kachel.falsch { background: var(--kachel-falsch); box-shadow: 0 3px 0 var(--kachel-falsch-kante); }
+.upa-kachel.leer { border: 2px solid var(--kachel-rahmen); }
+.upa-v-knoepfe { display: flex; gap: 8px; min-width: 0; }
+.upa-v-knoepfe .up-kn { min-width: 0; }
+.upa-v-knoepfe .up-kn:first-child { flex: 1; }
+/* Die Tasten teilen sich die Breite (bis 0.x: feste 25 px — elf Tasten waren bei 360 px einen Pixel zu breit). */
+.upa-tasten { display: flex; gap: 3px; justify-content: center; min-width: 0; }
+.upa-tasten span { flex: 1 1 0; min-width: 0; max-width: 25px; height: 34px; display: grid; place-items: center; font-weight: 700; font-size: .8rem;
+  background: var(--taste); color: var(--taste-schrift); border-radius: min(var(--kn-radius), 6px);
+  border: calc(var(--kn-stempel) * 1.5px) solid var(--schrift);
+  box-shadow: 0 3px 0 color-mix(in srgb, var(--schrift) calc(var(--kn-stempel) * 100%), var(--taste-kante)); }
+.upa-schach { display: grid; grid-template-columns: repeat(6, 1fr); width: 186px; align-self: center;
+  border-radius: var(--upa-klein); overflow: hidden; box-shadow: 0 3px 0 var(--still-kante); }
+.upa-schach span { aspect-ratio: 1; display: grid; place-items: center; font-size: 1.35rem; line-height: 1;
+  font-family: "Segoe UI Symbol", "Apple Symbols", system-ui, sans-serif; }
+.upa-schach .hell { background: var(--feld-hell); }
+.upa-schach .dunkel { background: var(--feld-dunkel); }
+.upa-schach i { font-style: normal; }
+.upa-schach .weiss { color: #fbfaf7; text-shadow: 0 1px 0 #111, 1px 0 0 #111, -1px 0 0 #111, 0 -1px 0 #111; }
+.upa-schach .schwarz { color: #16171a; }
+/* ---- Vorschau Kaffekasse (seit 09.10.2026, app: "kaffekasse"): Produktkarten mit Zähler und „Dran: <Name>“,
+   aus Bordmitteln wie die Kacheln von Typoluck — kein Bild, kein Platz. Im Blatt (kompakt) nur die erste Karte. ---- */
+.upa-kasse { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.upa-produkt { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; min-width: 0;
+  padding: 8px 10px; background: var(--karte); border-radius: var(--upa-klein); box-shadow: 0 3px 0 var(--still-kante); }
+.upa-produkt-bild { width: 36px; height: 36px; display: grid; place-items: center; font-weight: 700; font-size: 1.05rem;
+  border-radius: var(--upa-klein); background: var(--karte-leise); color: var(--schrift-leise); }
+.upa-produkt-text { display: grid; gap: 2px; min-width: 0; }
+.upa-produkt-text b { font-size: .95rem; line-height: 1.15; overflow-wrap: anywhere; }
+.upa-produkt-text small { font-size: .74rem; font-weight: 700; color: var(--schrift-leise); overflow-wrap: anywhere; }
+.upa-zaehler { font-weight: 700; font-size: 1.2rem; font-variant-numeric: tabular-nums; }
+.upa-kompakt .upa-produkt:nth-child(n+2) { display: none; }
+
+/* ---- Kategorie-Kacheln: 2er-Raster. `upa-kat-eigen` zeichnet der Baustein neu; weitere Kacheln (die reine
+   Sammlung der App, upcrew-sammlung.js) hängen dahinter im selben Raster. ---- */
+.upa-kat-raster { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 12px 14px 8px; }
+.upa-kat-eigen { display: contents; }
+.upa-kat { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 4px 10px; min-width: 0;
+  padding: 10px 10px 9px; font: inherit; text-align: left; color: var(--schrift); background: var(--karte); cursor: pointer;
+  border: 2px solid transparent; border-radius: var(--upa-rund); box-shadow: 0 3px 0 var(--still-kante);
+  -webkit-tap-highlight-color: transparent; }
+.upa-kat:active { transform: translateY(3px); box-shadow: 0 0 0 var(--still-kante); }
+.upa-kat:focus-visible { outline: 3px solid var(--haupt); outline-offset: 2px; }
+.upa-kat-probe { border-color: var(--haupt); }
+.upa-kat-bild { display: grid; place-items: center; width: 52px; height: 52px; }
+.upa-kat-bild .up-platz { --up-pl-breite: 52px; }
+.upa-kat-bild .upa-darst { width: 38px; height: 38px; }
+.upa-kat-text { display: grid; gap: 2px; min-width: 0; }
+.upa-kat-text b { font-size: .86rem; line-height: 1.15; overflow-wrap: break-word; hyphens: auto; }
+.upa-kat-text small { font-size: .72rem; font-weight: 700; color: var(--schrift-leise); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.upa-strich { grid-column: 1 / -1; display: block; height: 4px; margin-top: 4px; overflow: hidden; border-radius: 999px; background: var(--karte-leise); }
+.upa-strich i { display: block; height: 100%; border-radius: inherit; background: var(--haupt); }
+.upa-kat-bald .upa-kat-bild { opacity: .6; }
+/* Schmale Handys (360 px): Bild und Abstände kleiner, damit „Farbwelten“, „Profilzeichen“, „Darstellung“ in eine
+   Zeile passen (04.10.2026: brach vorher mitten im Wort um). Vorschau-Karte und Balken der Seite rücken mit auf
+   10 px — sonst fluchten die Kacheln nicht mit der Karte darüber (04.10.2026 nachts; das Blatt bleibt bei 12). */
+@media (max-width: 379px) {
+  .upa-vorschau-rahmen, .upa-aktion:not(.upa-b-aktion) { padding-left: 10px; padding-right: 10px; }
+  .upa-kat-raster { gap: 8px; padding-left: 10px; padding-right: 10px; }
+  .upa-kat { gap: 4px 8px; padding: 9px 8px 8px; }
+  .upa-kat-bild { width: 40px; height: 40px; }
+  .upa-kat-bild .up-platz { --up-pl-breite: 40px; }
+  .upa-kat-bild .upa-darst { width: 30px; height: 30px; }
+  .upa-kat-text b { font-size: .8rem; }
+}
+
+/* Bänder: „bald“ · „im Shop“ · „wird erspielt“ · der Ort der App. Nie ein Level. */
+.upa-band { display: inline-block; max-width: 100%; padding: 2px 6px; overflow-wrap: anywhere; vertical-align: 1px;
+  font-size: .6rem; font-style: normal; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; line-height: 1.25; text-align: center;
+  border-radius: 999px; background: var(--karte-leise); color: var(--schrift-leise); }
+.upa-band-bald { border: 1px dashed var(--rahmen); background: transparent; }
+
+/* ---- Blatt einer Kategorie: kompakte Vorschau, 3er-Raster, Balken unten. Rollt nur senkrecht. ---- */
+.upa-blatt-huelle > .up-bl-inhalt { padding: 0; }
+.upa-blatt { display: flex; flex-direction: column; min-height: 100%; }
+.upa-b-koerper { display: flex; flex: 1 1 auto; flex-direction: column; }
+.upa-b-zahl { flex: none; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--haupt); }
+.upa-b-vorschau { position: sticky; top: 0; z-index: 2; padding: 0 12px 10px; background: var(--flaeche); border-bottom: 1px solid var(--rahmen); }
+.upa-b-text { margin: 10px 14px 0; font-size: .8rem; color: var(--schrift-leise); }
+.upa-vorschau.upa-kompakt { min-height: 0; padding: 8px 10px; gap: 8px; }
+.upa-kompakt .upa-v-kopf b { font-size: 1rem; }
+.upa-kompakt .upa-tasten, .upa-kompakt .upa-brett div:nth-child(n+2) { display: none; }
+.upa-kompakt .upa-schach { width: 124px; }
+.upa-kompakt .upa-schach span { font-size: .9rem; }
+.upa-kompakt .upa-v-knoepfe .up-kn { min-height: 34px; font-size: .82rem; }
+.upa-raster { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 12px 12px 14px; }
+.upa-stueck { position: relative; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 10px 4px 8px; font: inherit; color: var(--schrift); background: var(--karte); cursor: pointer;
+  border: 2px solid transparent; border-radius: var(--upa-rund); box-shadow: 0 3px 0 var(--still-kante);
+  -webkit-tap-highlight-color: transparent; }
+.upa-stueck[aria-pressed="true"] { border-color: var(--haupt); }
+.upa-stueck.aktiv::after { content: ""; position: absolute; top: 6px; left: 6px; width: 7px; height: 7px; border-radius: 50%; background: var(--haupt); }
+.upa-stueck:active { transform: translateY(3px); box-shadow: 0 0 0 var(--still-kante); }
+.upa-stueck:focus-visible { outline: 3px solid var(--haupt); outline-offset: 2px; }
+.upa-stueck:disabled { cursor: default; box-shadow: none; }
+.upa-stueck.zu .upa-bild, .upa-stueck.upa-bald .upa-bild { opacity: .55; }
+.upa-bild { display: grid; place-items: center; min-height: 56px; max-width: 100%; }
+.upa-bild .up-platz { --up-pl-breite: 56px; }
+.upa-name { max-width: 100%; font-size: .72rem; font-weight: 700; line-height: 1.2; text-align: center; overflow-wrap: anywhere; }
+.upa-darst { display: block; width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--schrift-leise); }
+.upa-darst.hell { background: #f5f3ee; }
+.upa-darst.dunkel { background: #17181a; }
+.upa-darst.geraet { background: linear-gradient(135deg, #f5f3ee 50%, #17181a 50%); }
+.upa-set.leer { border: 2px dashed var(--rahmen); box-shadow: none; background: transparent; }
+.upa-set.leer .upa-bild { font-size: 1.6rem; color: var(--schrift-leise); }
+.upa-set-bild { display: grid; place-items: center; width: 48px; height: 40px; border-radius: var(--upa-klein); font-size: 1.3rem; }
+.upa-set-weg { position: absolute; top: 2px; right: 6px; font-size: .95rem; color: var(--schrift-leise); padding: 0 3px; }
+
+.upa-aktion { position: sticky; bottom: 0; z-index: 2; display: flex; gap: 8px; padding: 10px 14px 12px;
+  border-top: 1px solid var(--rahmen); background: var(--flaeche); margin-top: 8px; }
+.upa-aktion .up-kn { min-width: 0; }
+.upa-aktion .up-haupt { flex: 1; }
+.upa-aktion .up-kn:disabled { --kf: var(--karte-leise); --kk: var(--still-kante); --ks: var(--schrift-leise); opacity: 1; }
+.upa-b-aktion { margin-top: auto; }
+.upa-b-aktion .upa-zufall { flex: none; }
+/* Weg in den Shop (nur mit opt.zumShop): genau einer von „Übernehmen“ und „Im Shop ansehen“ steht da. */
+.upa-aktion .upa-zumshop[hidden], .upa-aktion .upa-uebernehmen[hidden] { display: none; }
+
+/* Rückfall ohne upcrew-blatt.js: das Blatt als eigene Ebene über der Seite. */
+.upa-blatt-eigen { position: fixed; inset: var(--oben-frei, 0px) 0 var(--up-sm-leiste, 0px) 0; z-index: 60; min-height: 0;
+  overflow-y: auto; overscroll-behavior: contain; background: var(--flaeche); color: var(--schrift); }
+.upa-b-kopf { display: flex; align-items: center; gap: 10px; padding: 10px 14px; }
+.upa-b-kopf h2 { flex: 1; min-width: 0; margin: 0; font-size: 1.1rem; overflow-wrap: anywhere; }
+
+/* Blunderluck-Brett in der Vorschau: 2D flach, 3D gekippt mit stehenden Figuren (nur Andeutung — die App kann
+   über opt.vorschau ein echtes 3D-Bild einsetzen). */
+.upa-schach-buehne { align-self: center; perspective: 520px; }
+.upa-schach-buehne.upa-3d { margin: -22px 0 -26px; }
+.upa-schach-buehne .upa-schach { transition: transform 320ms ease-out; transform-origin: 50% 60%; }
+.upa-schach-buehne.upa-3d .upa-schach { transform: rotateX(48deg) rotateZ(-8deg) scale(.92);
+  box-shadow: 0 10px 0 color-mix(in srgb, var(--feld-dunkel) 55%, #000); }
+.upa-schach-buehne.upa-3d .upa-schach i { display: inline-block; transform: rotateZ(8deg) rotateX(-48deg) translateY(-30%) scale(1.25);
+  transform-origin: 50% 100%; }
+.upa-brettbild { display: grid; grid-template-columns: 1fr 1fr; width: 34px; height: 34px; border-radius: 4px; overflow: hidden; }
+.upa-brettbild i { background: var(--schrift-leise); }
+.upa-brettbild i:nth-child(2), .upa-brettbild i:nth-child(3) { background: var(--karte-leise); }
+.upa-brettbild.upa-3d { transform: perspective(60px) rotateX(38deg); box-shadow: 0 4px 0 var(--still-kante); }
+
+@media (prefers-reduced-motion: reduce) {
+  .upa-vorschau.upa-neu { animation: none; }
+  .upa-schach-buehne .upa-schach { transition: none; }
+}
