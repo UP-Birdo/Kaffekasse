@@ -84,15 +84,22 @@ body {
     height: auto;
 }
 
+/* Unten so viel Luft wie Leiste + iPhone-Streifen: die Leiste liegt seit 0.7.2 FEST über dem Band. */
 .up-band-seite {
-    padding: var(--oben-frei) 14px 14px;
+    padding: var(--oben-frei) 14px calc(var(--leiste-hoehe) + env(safe-area-inset-bottom, 0px) + 14px);
 }
 
 /* Die Leiste sitzt wie in Blunderluck und Typoluck (0.7.1, Nutzer 10.10.2026: „wie bei
    Typoluck/Blunderluck“): der iPhone-Streifen kommt zur Höhe DAZU — der Baustein rechnet ihn
    in seine 64 px hinein, am iPhone blieben so nur rund 30 px für Symbole und Kapsel —, und
-   auf breiten Schirmen stehen die Tabs mittig auf 820 px. */
+   auf breiten Schirmen stehen die Tabs mittig auf 820 px. Seit 0.7.2 auch FEST am unteren Rand
+   wie in den Spielen (Nutzer-Foto 10.10.2026: am iPhone stand die Leiste im Fluss über einem
+   schwarzen Streifen, weil die Seite dort kürzer als der Bildschirm war). */
 .up-leiste {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
     z-index: 50;
     flex: none;
     height: calc(var(--leiste-hoehe) + env(safe-area-inset-bottom, 0px));
@@ -792,6 +799,12 @@ button {
     padding: 10px 12px;
     background: var(--karte-leise);
     border-radius: var(--rund-klein);
+}
+
+/* Ohne Treffer versteckt — `display: flex` oben schlüge sonst das hidden-Attribut (0.7.2:
+   leerer grauer Balken unter „Suchen“). */
+.vorschau-produkt[hidden] {
+    display: none;
 }
 
 .vorschau-produkt img {

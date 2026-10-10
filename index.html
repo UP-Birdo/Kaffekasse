@@ -4,8 +4,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#141414">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <!-- Wie Blunderluck und Typoluck OHNE „apple-mobile-web-app-capable“ und durchsichtige
+         Statusleiste (0.7.2): mit „black-translucent“ ist die Seite als Home-Bildschirm-App am
+         iPhone um die Statusleiste zu KURZ — unter der Leiste blieb ein schwarzer Streifen.
+         Die Statusleiste nimmt jetzt die theme-color; das Manifest macht die App eigenständig. -->
     <meta name="apple-mobile-web-app-title" content="Kaffekasse">
     <title>Kaffekasse</title>
     <link rel="manifest" href="manifest.webmanifest">
