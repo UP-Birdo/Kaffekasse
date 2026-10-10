@@ -324,7 +324,9 @@ const STEUERUNG = {
      * Änderungen an der Kasse — sofort anzeigen, dann senden
      * ---------------------------------------------------------------- */
 
-    async _anwenden(ergebnis, kennung) {
+    /* `nichtWarten`: das Senden läuft hinterher (seit 0.8.0 beim „+“ — die Kurz-Leiste soll
+       sofort stehen, nicht erst, wenn die Datenbank geantwortet hat). */
+    async _anwenden(ergebnis, kennung, nichtWarten) {
         if (!ergebnis) {
             return false;
         }
@@ -336,6 +338,10 @@ const STEUERUNG = {
         if (typeof APP !== "undefined") {
             APP.zustand = "wartet";
         }
+        if (nichtWarten) {
+            STEUERUNG.nachsenden().catch((fehler) => console.error("Kaffekasse: Senden", fehler));
+            return true;
+        }
         await STEUERUNG.nachsenden();
         return true;
     },
@@ -345,7 +351,7 @@ const STEUERUNG = {
     async kaufen(produktId, menge) {
         const uid = STEUERUNG._uid();
         const e = KASSE.kaufEintragen(STEUERUNG.stand, produktId, uid, STEUERUNG.jetzt(), STEUERUNG.zufall, menge || 1);
-        const ok = await STEUERUNG._anwenden(e, e ? "eintrag:" + e.eintragId : "");
+        const ok = await STEUERUNG._anwenden(e, e ? "eintrag:" + e.eintragId : "", true);
         return ok ? e.eintragId : "";
     },
 
@@ -398,6 +404,15 @@ const STEUERUNG = {
     async produktAnlegen(felder) {
         const e = KASSE.produktAnlegen(STEUERUNG.stand, felder, STEUERUNG._uid(), STEUERUNG.jetzt(), STEUERUNG.zufall);
         return STEUERUNG._anwenden(e, e ? "produkt:" + e.produktId : "");
+    },
+
+    /* Name / nach dem Öffnen haltbar (0.8.0). → true, false bei Ablehnung. */
+    async produktAendern(produktId, felder) {
+        const e = KASSE.produktAendern(STEUERUNG.stand, produktId, felder, STEUERUNG._uid(), STEUERUNG.jetzt());
+        if (e && Object.keys(e.aenderungen).length === 0) {
+            return true;
+        }
+        return STEUERUNG._anwenden(e, e ? "produkt-aendern:" + produktId + ":" + STEUERUNG.jetzt() : "");
     },
 
     async produktAusblenden(produktId) {

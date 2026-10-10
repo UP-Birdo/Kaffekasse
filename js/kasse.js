@@ -41,6 +41,17 @@ const KASSE = {
     ZUKUNFT_MS: 5 * 60 * 1000,
     /* Name des Ladens (seit 0.7.0): getrimmt, höchstens 40 Zeichen. */
     LADEN_MAX: 40,
+    /* Nach dem Öffnen haltbar: ganze Tage 1 … OFFEN_TAGE_MAX (0.8.0); fehlt = Vorschlag nach Name. */
+    OFFEN_TAGE_MAX: 365,
+    /* Vorschläge nach dem Namen (erster Treffer gilt, klein geschrieben verglichen). */
+    OFFEN_VORSCHLAG: [
+        [/hafer|oat|soja|mandel|barista|pflanz/, 5],
+        [/milch|sahne/, 4],
+        [/kaffee|espresso|bohne/, 30],
+        [/keks|gebäck|waffel|cracker/, 14],
+        [/tee/, 90],
+        [/zucker|süßstoff|honig/, 180]
+    ],
 
     /* Die Felder, die nur schreibt, wer gekauft hat (seit 0.7.0 dazu Laden, Angebot, MHD). */
     KAUF_FELDER: ["gekauftAm", "preis", "laden", "angebot", "mhd"],
@@ -102,8 +113,32 @@ const KASSE = {
             bild: KASSE._text(p.bild, 400),
             angelegtVon: KASSE._text(p.angelegtVon),
             angelegtAm: KASSE._zahl(p.angelegtAm),
-            aktiv: p.aktiv !== false
+            aktiv: p.aktiv !== false,
+            ...(KASSE._offenTage(p.offenTage) ? { offenTage: KASSE._offenTage(p.offenTage) } : {})
         };
+    },
+
+    /* Ganze Tage 1 … OFFEN_TAGE_MAX, sonst 0 (= nicht gesetzt). */
+    _offenTage(wert) {
+        const z = (typeof wert === "number") ? wert : NaN;
+        return (Number.isInteger(z) && z >= 1 && z <= KASSE.OFFEN_TAGE_MAX) ? z : 0;
+    },
+
+    /* Vorschlag nach dem Namen (Milch 4, Hafermilch 5, Kaffee 30 …), 0 = keiner. */
+    offenTageVorschlag(name) {
+        const n = String(name || "").toLocaleLowerCase("de");
+        for (const [muster, tage] of KASSE.OFFEN_VORSCHLAG) {
+            if (muster.test(n)) {
+                return tage;
+            }
+        }
+        return 0;
+    },
+
+    /* Was gilt: eigener Wert, sonst Vorschlag. → { tage, vorschlag: true|false } (tage 0 = unbekannt). */
+    offenTage(produkt) {
+        const eigen = KASSE._offenTage(produkt && produkt.offenTage);
+        return eigen ? { tage: eigen, vorschlag: false } : { tage: KASSE.offenTageVorschlag(produkt && produkt.name), vorschlag: true };
     },
 
     /* Preis in Cent: ganze Zahl 0 … PREIS_MAX, sonst -1 (= kein gültiger Preis). */
@@ -291,6 +326,47 @@ const KASSE = {
         s.geaendertAm = KASSE._marke(s, zeit);
         return { stand: s, produktId: produktId, produkt: produkt,
             aenderungen: { ["produkte/" + produktId]: produkt, geaendertAm: s.geaendertAm } };
+    },
+
+    /* Name und „nach dem Öffnen haltbar“ ändern (0.8.0) — jedes Mitglied. `felder`: { name,
+       offenTage } — undefined = unverändert, offenTage 0/null = zurück zum Vorschlag. */
+    produktAendern(stand, produktId, felder, uid, zeit) {
+        const s = KASSE.normalisieren(stand);
+        const alt = s.produkte[produktId];
+        const f = KASSE._objekt(felder);
+        if (!alt || !KASSE.istMitglied(s, uid)) {
+            return null;
+        }
+        const neu = Object.assign({}, alt);
+        const aenderungen = {};
+        if (f.name !== undefined) {
+            const name = KASSE._text(f.name, KASSE.NAME_MAX).trim();
+            if (!name) {
+                return null;
+            }
+            if (name !== alt.name) {
+                neu.name = name;
+                aenderungen["produkte/" + produktId + "/name"] = name;
+            }
+        }
+        if (f.offenTage !== undefined) {
+            const tage = KASSE._offenTage(f.offenTage);
+            if (tage !== KASSE._offenTage(alt.offenTage)) {
+                if (tage) {
+                    neu.offenTage = tage;
+                } else {
+                    delete neu.offenTage;
+                }
+                aenderungen["produkte/" + produktId + "/offenTage"] = tage || null;
+            }
+        }
+        if (Object.keys(aenderungen).length === 0) {
+            return { stand: s, aenderungen: {} };
+        }
+        s.produkte = Object.assign({}, s.produkte, { [produktId]: neu });
+        s.geaendertAm = KASSE._marke(s, zeit);
+        aenderungen.geaendertAm = s.geaendertAm;
+        return { stand: s, aenderungen: aenderungen };
     },
 
     /* Ausblenden statt löschen: Einträge zeigen weiter auf das Produkt. */
@@ -820,7 +896,8 @@ const KASSE = {
         return Math.round(ms / 86400000) + " Tage";
     },
 
-    /* „Heute“, „Gestern“, sonst „TT.MM.“ (mit Jahr, wenn es ein anderes ist). */
+    /* „heute“, „gestern“, sonst „TT.MM.“ (mit Jahr, wenn es ein anderes ist). Klein, weil es
+       mitten im Satz steht; allein in einer Kachel macht `KASSE.gross` den ersten Buchstaben groß. */
     datumKurz(ms, heute) {
         if (!(KASSE._zahl(ms) > 0)) {
             return "–";
@@ -828,10 +905,15 @@ const KASSE = {
         const schluessel = KASSE.tagSchluessel(ms);
         const name = KASSE.tagName(schluessel, heute);
         if (name === "Heute" || name === "Gestern") {
-            return name;
+            return name.toLowerCase();   /* steht mitten im Satz: „offen seit gestern“ (0.8.0) */
         }
         const t = schluessel.split("-");
         return t[2] + "." + t[1] + "." + (t[0] === KASSE.tagSchluessel(heute).slice(0, 4) ? "" : t[0]);
+    },
+
+    gross(text) {
+        const t = String(text || "");
+        return t.charAt(0).toUpperCase() + t.slice(1);
     },
 
     /* Für <input type="datetime-local">: Ortszeit "JJJJ-MM-TTTHH:MM" und zurück (0 = leer/ungültig). */

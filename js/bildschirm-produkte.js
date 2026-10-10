@@ -139,8 +139,8 @@ const PRODUKTE = {
                     { titel: "Ø Preis", wert: KASSE.euro(f.schnittPreis) },
                     { titel: "Ø Lager", wert: KASSE.dauerText(f.lagerMs) },
                     { titel: "Ø Verbrauch", wert: KASSE.dauerText(f.verbrauchMs) },
-                    { titel: "Offen seit", wert: f.offen ? KASSE.datumKurz(f.offen.geoeffnetAm, jetzt) : "–" },
-                    { titel: "Leer ~", wert: !f.prognose ? "–" : f.prognose < jetzt ? "überfällig" : KASSE.datumKurz(f.prognose, jetzt) },
+                    { titel: "Offen seit", wert: f.offen ? KASSE.gross(KASSE.datumKurz(f.offen.geoeffnetAm, jetzt)) : "–" },
+                    { titel: "Leer ~", wert: !f.prognose ? "–" : f.prognose < jetzt ? "überfällig" : KASSE.gross(KASSE.datumKurz(f.prognose, jetzt)) },
                     { titel: "Dran", wert: f.dran ? wer(f.dran) : "–" },
                     { titel: "Je Woche", wert: f.jeWoche === null ? "–" : String(f.jeWoche).replace(".", ",") }
                 ]));
@@ -162,7 +162,7 @@ const PRODUKTE = {
                     { titel: "Normalpreis", wert: KASSE.euro(l.normalpreis) },
                     { titel: "Ø Ersparnis", wert: l.ersparnis > 0 ? KASSE.euro(l.ersparnis) : "–" },
                     { titel: "Ø Abstand", wert: KASSE.dauerText(l.abstandMs) },
-                    { titel: "Nächstes ~", wert: l.naechstesAngebot ? KASSE.datumKurz(l.naechstesAngebot.naechstes, jetzt) : "–" },
+                    { titel: "Nächstes ~", wert: l.naechstesAngebot ? KASSE.gross(KASSE.datumKurz(l.naechstesAngebot.naechstes, jetzt)) : "–" },
                     { titel: "Läden", wert: String(l.laeden.length) }
                 ]));
                 for (const a of l.angebote) {
@@ -179,11 +179,49 @@ const PRODUKTE = {
                 const gruppe = document.createElement("div");
                 gruppe.className = "verlauf-gruppe";
                 for (const e of f.letzte) {
-                    gruppe.appendChild(VERLAUF._zeile(Object.assign({ gueltig: true, produktName: KASSE.datumKurz(e.kauf, jetzt) }, e), uid));
+                    gruppe.appendChild(VERLAUF._zeile(Object.assign({ gueltig: true, produktName: KASSE.gross(KASSE.datumKurz(e.kauf, jetzt)) }, e), uid));
                 }
                 if (f.letzte.length) {
                     letzte.appendChild(gruppe);
                 }
+
+                /* Einstellen (0.8.0): kurzer Name für die Bestand-Karte und wie lange eine offene
+                   Packung hält — leer = der Vorschlag nach dem Namen. */
+                const einstellen = KASSE_BLATT._abschnitt(el, "Einstellen");
+                const t = KASSE.offenTage(f.produkt);
+                const nameFeld = KASSE_BLATT._feld("produkt-name-neu", "Name", "Hafermilch", "text", KASSE.NAME_MAX);
+                nameFeld.feld.value = f.produkt.name;
+                const tageFeld = KASSE_BLATT._feld("produkt-offen-tage", "Offen haltbar (Tage)",
+                    t.vorschlag && t.tage ? String(t.tage) : "", "number", 3);
+                tageFeld.feld.inputMode = "numeric";
+                tageFeld.feld.min = "1";
+                tageFeld.feld.max = String(KASSE.OFFEN_TAGE_MAX);
+                tageFeld.feld.value = t.vorschlag ? "" : String(t.tage);
+                einstellen.appendChild(nameFeld.zeile);
+                einstellen.appendChild(tageFeld.zeile);
+                if (t.vorschlag) {
+                    einstellen.appendChild(KASSE_BLATT._hinweis(t.tage ? "Leer = Vorschlag " + t.tage + " Tage" : "Leer = ohne „bis“"));
+                }
+                const speichern = DIALOG.knopf("Speichern", "still", async () => {
+                    nameFeld.fehler.textContent = "";
+                    tageFeld.fehler.textContent = "";
+                    const tage = tageFeld.feld.value.trim();
+                    if (tage && !KASSE._offenTage(Number(tage))) {
+                        tageFeld.fehler.textContent = "1 bis " + KASSE.OFFEN_TAGE_MAX;
+                        return;
+                    }
+                    if (!nameFeld.feld.value.trim()) {
+                        nameFeld.fehler.textContent = "Name fehlt";
+                        return;
+                    }
+                    const ok = await S.produktAendern(produktId, { name: nameFeld.feld.value, offenTage: tage ? Number(tage) : 0 });
+                    if (ok) {
+                        UPCREW_BLATT.schliessen();
+                        return;
+                    }
+                    nameFeld.fehler.textContent = "Abgelehnt";
+                });
+                einstellen.appendChild(KASSE_BLATT._knoepfe(speichern));
 
                 const daten = KASSE_BLATT._abschnitt(el, "Produktdaten");
                 const seite = (typeof PRODUKTSUCHE !== "undefined") ? PRODUKTSUCHE.seite(f.produkt.ean) : "";

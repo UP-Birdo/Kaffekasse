@@ -165,11 +165,10 @@ button {
     color: var(--schrift-leise);
 }
 
-/* Der Anker des Offline-Zeichens: ein leerer Platz rechts im Kopf. */
-.kopf-rechts {
-    flex: none;
-    width: 32px;
-    height: 32px;
+/* Kein Level in der Kaffekasse (0.8.0): der Ring um den Kreis bleibt leer — ganz weg damit,
+   im Kopf wie im Profil. */
+.up-pf-ring {
+    background: none;
 }
 
 .seite-titel {
@@ -723,9 +722,202 @@ button {
     font-size: .7rem;
 }
 
+/* ---------- Bestand-Karte mit Packungen (0.8.0) ----------
+   Kopf (Bild · Name · Lage · Hinweis), darunter je Packung eine Zeile, unten „+ Gekauft“. */
+
+.produkt.bk {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+}
+
+.bk-kopf {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.bk .produkt-bild {
+    width: 60px;
+    height: 60px;
+    flex: none;
+}
+
+.bk .produkt-text {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.bk-kopf .bestand-tipp {
+    flex: none;
+    align-self: flex-start;
+}
+
+.bk-lage {
+    font-size: .86rem;
+    font-weight: 700;
+    color: var(--schrift-leise);
+}
+
+.bk-lage.bestand-leer {
+    color: var(--gefahr);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+.bk-liste {
+    display: grid;
+    gap: 6px;
+}
+
+.bk-zeile {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    padding: 6px 6px 6px 8px;
+    background: var(--karte-leise);
+    border-radius: var(--rund-klein);
+}
+
+.bk-zeile-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--schrift);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.bk-marke {
+    flex: none;
+    width: 46px;
+    padding: 2px 0;
+    font-size: .7rem;
+    font-weight: 900;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--schrift-leise);
+    border: 1px solid var(--rahmen);
+    border-radius: var(--rund-voll);
+}
+
+.bk-offen .bk-marke {
+    color: var(--haupt-schrift);
+    background: var(--haupt);
+    border-color: var(--haupt-kante);
+}
+
+.bk-mitte {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+}
+
+.bk-mitte b {
+    font-size: .95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bk-mitte small {
+    font-size: .78rem;
+    font-weight: 700;
+    color: var(--schrift-leise);
+}
+
+.bk-balken {
+    display: block;
+    height: 5px;
+    margin-top: 3px;
+    overflow: hidden;
+    background: var(--rahmen);
+    border-radius: var(--rund-voll);
+}
+
+.bk-balken span {
+    display: block;
+    height: 100%;
+    background: var(--gut);
+    border-radius: var(--rund-voll);
+}
+
+.bk-knapp .bk-balken span {
+    background: var(--warnung);
+}
+
+.bk-drueber .bk-mitte b,
+.bk-drueber .bk-mitte small {
+    color: var(--gefahr);
+}
+
+.bk-zeile button.bk-knopf {
+    flex: none;
+    min-width: 72px;
+    min-height: 36px;
+    padding: 4px 10px;
+    font-size: .8rem;
+}
+
+.bk-schrank {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 40px;
+    padding: 6px 10px;
+    border: 1px dashed var(--rahmen);
+    border-radius: var(--rund-klein);
+    background: none;
+    color: var(--schrift);
+    font: inherit;
+    font-size: .86rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.bk-schrank .bk-schrank-pfeil {
+    width: 18px;
+    height: 18px;
+    transition: transform 160ms;
+}
+
+.bk-schrank[aria-expanded="true"] .bk-schrank-pfeil {
+    transform: rotate(90deg);
+}
+
+.bk button.bk-plus {
+    font-size: .95rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 44px;
+}
+
+.bk-plus .bk-plus-zeichen {
+    width: 20px;
+    height: 20px;
+}
+
+/* Text oben über die ganze Breite, die zwei Knöpfe darunter (0.8.0: vorher drückten die Knöpfe
+   den Text auf 92 px und drei Zeilen). */
 .bestand-schnell {
     grid-column: 1 / -1;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 8px;
     padding: 6px 8px;
@@ -734,7 +926,7 @@ button {
 }
 
 .bestand-schnell-text {
-    flex: 1;
+    flex: 1 1 100%;
     min-width: 0;
     min-height: 34px;
     padding: 0;
@@ -752,6 +944,7 @@ button {
 }
 
 .bestand-schnell button.knopf-still {
+    flex: 1 1 0;
     min-height: 34px;
     padding-top: 4px;
     padding-bottom: 4px;

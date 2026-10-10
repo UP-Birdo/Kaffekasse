@@ -10,8 +10,9 @@
  *
  * Woher die Zahlen kommen (Kaffekasse liest nur, schreibt nichts ans Konto):
  *   Name, #Tag   der eigene Konto-Eintrag (APP.eigener)
- *   Level        der öffentliche Auszug des Kontos (`auszug.xp`, geschrieben von den Spielen),
- *                gerechnet mit UPCREW_LEVELPFAD.ausXp — fehlt eins davon: kein Level
+ *   Level        KEINS (seit 0.8.0, Nutzer 10.10.2026: „bei Kaffekasse den Level-Ring aus dem Profil,
+ *                hier bekommst du keine XP“): ohne `level` lässt der Baustein Zahl, Level-Pfad und
+ *                Level-Balken weg; den leeren Ring blendet css\stil.css aus.
  *   Abzeichen    die ausgerüsteten (`abzeichen` am Konto) über UPCREW_ABZEICHEN aus dem
  *                gemeinsamen Fortschritt des eigenen Eintrags
  *   Statistik    die eigenen Packungen und Ausgaben in der gewählten Kasse (Modell)
@@ -47,10 +48,6 @@ const PROFIL = {
             serie: 0
         };
         const auszug = PROFIL._auszug();
-        if (auszug && typeof auszug.xp === "number" && typeof UPCREW_LEVELPFAD !== "undefined"
-                && typeof UPCREW_LEVELPFAD.ausXp === "function") {
-            Object.assign(d, UPCREW_LEVELPFAD.ausXp(auszug.xp));
-        }
         if (ich && typeof UPCREW_ABZEICHEN !== "undefined" && typeof UPCREW_ABZEICHEN.alle === "function") {
             try {
                 const alle = UPCREW_ABZEICHEN.alle(ich.fortschritt || null, auszug ? Number(auszug.serie) || 0 : 0);

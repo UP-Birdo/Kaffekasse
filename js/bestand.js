@@ -213,6 +213,54 @@ const BESTAND = {
         return lageDaten;
     },
 
+    /* Die PACKUNGEN eines Produkts für die Bestand-Karte (0.8.0, Nutzer 10.10.2026: „jedes
+       Produkt untereinander … alles was im Vorrat ist und was offen ist“):
+         offen  geöffnet, nicht leer — neueste zuerst; je Packung `bis` (geöffnet + Tage nach
+                dem Öffnen), `restTage` (ganze Tage bis dahin, negativ = drüber) und `anteil`
+                (0 = frisch geöffnet … 1 = abgelaufen); ohne Tage nur `seit`
+         zu     verschlossen — nächstes MHD zuerst, ohne MHD nach Kauf (älteste zuerst)
+       → { offen: [...], zu: [...], vorrat (Stück), tage, vorschlag } */
+    packungen(stand, produktId, jetzt) {
+        const j = BESTAND._zahl(jetzt);
+        const s = (stand && stand.eintraege) ? stand : KASSE.normalisieren(stand);
+        const p = s.produkte[produktId];
+        const t = KASSE.offenTage(p);
+        const heute = KASSE.tagBeginn(j);
+        const liste = KASSE.packungen(s, { produktId: produktId });
+        const offen = liste.filter((e) => e.geoeffnetAm && !e.leerAm)
+            .sort((a, b) => b.geoeffnetAm - a.geoeffnetAm)
+            .map((e) => {
+                if (!t.tage) {
+                    return Object.assign({}, e, { bis: null, restTage: null, anteil: null });
+                }
+                const bis = KASSE.tagBeginn(e.geoeffnetAm) + t.tage * BESTAND.TAG_MS;
+                const rest = Math.round((bis - heute) / BESTAND.TAG_MS);
+                const anteil = Math.min(1, Math.max(0, (j - e.geoeffnetAm) / (bis - e.geoeffnetAm || 1)));
+                return Object.assign({}, e, { bis: bis, restTage: rest, anteil: anteil });
+            });
+        const zu = liste.filter((e) => !e.geoeffnetAm && !e.leerAm)
+            .sort((a, b) => (a.mhd || Infinity) - (b.mhd || Infinity) || a.kauf - b.kauf)
+            .map((e) => Object.assign({}, e, { abgelaufen: !!(e.mhd && e.mhd < heute) }));
+        return { offen: offen, zu: zu, vorrat: zu.reduce((a, e) => a + e.menge, 0), tage: t.tage, vorschlag: t.vorschlag };
+    },
+
+    /* „noch 2 Tage“ · „heute“ · „seit 1 Tag drüber“ — für eine offene Packung mit Tagen. */
+    restText(restTage) {
+        if (restTage === null || restTage === undefined) {
+            return "";
+        }
+        if (restTage > 1) {
+            return "noch " + restTage + " Tage";
+        }
+        if (restTage === 1) {
+            return "noch 1 Tag";
+        }
+        if (restTage === 0) {
+            return "bis heute";
+        }
+        return -restTage === 1 ? "1 Tag drüber" : -restTage + " Tage drüber";
+    },
+
     /* Der Bestand der Kasse: je aktivem Produkt die Lage (alphabetisch wie die Produkte). */
     bestand(stand, jetzt) {
         const s = (stand && stand.eintraege) ? stand : KASSE.normalisieren(stand);

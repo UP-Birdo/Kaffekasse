@@ -2,11 +2,11 @@
  * bildschirm-start.js — der Tab „Bestand“ (Mitte, beim Start offen; bis 0.6.0 „Start“; Nutzer
  * 09.10.2026: „in der mitte … das wichtigste … der bestand“). Oben der Profil-Kopf wie in den
  * Spielen (js\profil.js; ohne Profil-Baustein eine schlichte Kopfzeile), rechts der Anker des
- * Offline-Zeichens; darunter die Kasse-Karte (Name, Mitglieder, Code als Etikett) und je
- * Produkt eine Bestand-Karte: reicht bis ~, Tipp, offen seit (von wem klein), Vorrat
- * verschlossen (Anzahl, älteste seit, MHD), Angebot je Laden, „Dran“ klein — und die EINE
- * Hauptaktion „+“. Nach dem „+“ die kleine Leiste „Laden · Angebot · MHD“ (vorbefüllt);
- * „Eben …“ öffnet das Packungs-Blatt.
+ * Offline-Zeichens (seit 0.8.0 am Profilbild); darunter die Kasse-Karte (Name, Mitglieder,
+ * Code als Etikett) und je Produkt eine Bestand-Karte mit seinen PACKUNGEN (0.8.0): offene
+ * mit „bis …“ und Balken, verschlossene mit MHD, bei langer Liste hinter „Im Schrank“ — und
+ * unten „+ Gekauft“. Nach dem „+“ die kleine Leiste „Laden · Angebot · MHD“ (vorbefüllt);
+ * „Eben …“ und jede Zeile öffnen das Packungs-Blatt.
  *
  * Der Bildschirm rechnet nichts — Zahlen und Regeln kommen aus dem Modell (js\kasse.js,
  * js\bestand.js),
@@ -30,10 +30,7 @@ const START = {
         kopf.setAttribute("data-up-bl-kopf", "");
         const profil = document.createElement("div");
         profil.className = "kopf-profil";
-        const rechts = document.createElement("div");
-        rechts.className = "kopf-rechts";
         kopf.appendChild(profil);
-        kopf.appendChild(rechts);
         ort.appendChild(kopf);
         START.profilEl = profil;
         PROFIL.kopf(profil);
@@ -43,8 +40,10 @@ const START = {
             START.offlineGriff = null;
         }
         if (typeof UPCREW_OFFLINE !== "undefined") {
-            /* Eigene Texte: hier wird nichts gespielt, es warten Einträge. */
-            START.offlineGriff = UPCREW_OFFLINE.an(rechts, { ecke: "rechts",
+            /* Am Profilbild unten links wie in Blunderluck (0.8.0) — bis 0.7.2 hielt ein leerer
+               Platz rechts im Kopf 42 px frei und schob den Menü-Knopf nach innen. Eigene Texte: hier wird
+               nichts gespielt, es warten Einträge. */
+            START.offlineGriff = UPCREW_OFFLINE.an(profil.querySelector(".up-pf-kz-feld") || profil, { ecke: "unten-links",
                 texte: { name: "Offline", blaseTitel: "Offline", blaseText: "Einträge warten aufs Netz", hochgeladen: "Gesendet" } });
         }
 
@@ -122,80 +121,75 @@ const START = {
         ort.appendChild(zeile);
     },
 
-    /* Die Bestand-Karte eines Produkts: was DA ist (offen, Vorrat, MHD), reicht bis ~,
-       Angebote je Laden, der Tipp — alles aus BESTAND.lage. Mitglieder nur klein („Dran“). */
+    /* Die Bestand-Karte eines Produkts (seit 0.8.0, Nutzer 10.10.2026: „nicht das Produkt
+       beschrieben, sondern von wann bis wann es offen haltbar ist und wie viele im Bestand
+       sind, mit dem Bild … jedes Produkt untereinander … alles was im Vorrat ist und was offen
+       ist, darunter das Plus; wird die Liste zu lang, nur die offenen, der Rest in einem
+       Untermenü“):
+         Kopf    Bild · Name · „1 offen · 2 im Schrank“ (Leer rot) · Hinweis nur, wenn etwas zu
+                 tun ist (Jetzt kaufen, MHD bald)
+         Liste   je OFFENE Packung: „bis Sa 12.10.“, geöffnet am, noch n Tage, Balken, „Leer“;
+                 je VERSCHLOSSENE: MHD, gekauft am, „Öffnen“. Mehr als ZEILEN_MAX Zeilen: die
+                 offenen bleiben, die verschlossenen klappen hinter „Im Schrank: n ›“
+         Fuß     Kurz-Leiste nach dem Kauf, „Eben …“ und „+ Gekauft“ (= eine neue Packung)
+       Tipp auf eine Zeile → das Packungs-Blatt (Preis, Laden, Daten ändern). Angebote, Reicht
+       bis und Dran stehen in Statistik und im Produkt-Blatt. */
+    ZEILEN_MAX: 3,
+    aufgeklappt: {},
+
     _produktKarte(stand, produkt) {
         const S = STEUERUNG;
-        const uid = (typeof KONTO !== "undefined") ? KONTO.uid() : null;
         const jetzt = S.jetzt();
         const l = BESTAND.lage(stand, produkt.id, jetzt);
-        const dran = KASSE.naechsterDran(stand, produkt.id);
-        const name = (wer) => (wer === uid ? "Du" : (KASSE.mitgliedName(stand, wer) || "Ehemals"));
+        const p = BESTAND.packungen(stand, produkt.id, jetzt);
 
         const karte = document.createElement("section");
-        karte.className = "produkt" + (l.leer ? " produkt-leer" : "");
+        karte.className = "produkt bk" + (l.leer ? " produkt-leer" : "");
         karte.setAttribute("aria-label", produkt.name);
 
-        karte.appendChild(START._produktBild(produkt));
-
+        const kopf = document.createElement("div");
+        kopf.className = "bk-kopf";
+        kopf.appendChild(START._produktBild(produkt));
         const text = document.createElement("div");
         text.className = "produkt-text";
         const titel = document.createElement("b");
         titel.className = "produkt-name";
         titel.textContent = produkt.name;
         text.appendChild(titel);
-        const reicht = document.createElement("span");
-        reicht.className = "bestand-reicht" + (l.leer ? " bestand-leer" : "");
-        reicht.textContent = BESTAND.reichtText(l, jetzt);
-        text.appendChild(reicht);
-        if (l.tipp) {
+        const lage = document.createElement("span");
+        lage.className = "bk-lage" + (l.leer ? " bestand-leer" : "");
+        lage.textContent = l.leer ? "Leer" : [
+            p.offen.length ? p.offen.length + " offen" : "",
+            p.vorrat ? p.vorrat + " im Schrank" : ""
+        ].filter(Boolean).join(" · ");
+        text.appendChild(lage);
+        kopf.appendChild(text);
+        if (l.tipp && (l.tipp.art === "kaufen" || l.tipp.art === "mhd")) {
             const tipp = document.createElement("span");
             tipp.className = "bestand-tipp tipp-" + l.tipp.art;
-            tipp.textContent = l.tipp.text + (l.tipp.menge > 1 ? " · bis " + l.tipp.menge + " Stk." : "");
-            text.appendChild(tipp);
+            tipp.textContent = l.tipp.text;
+            kopf.appendChild(tipp);
         }
-        karte.appendChild(text);
+        karte.appendChild(kopf);
 
-        const plus = DIALOG.knopf("+", "haupt", async () => {
-            plus.disabled = true;
-            const eintragId = await S.kaufen(produkt.id, 1);
-            if (eintragId) {
-                START.schnellZeigen(produkt.id, eintragId);
+        const liste = document.createElement("div");
+        liste.className = "bk-liste";
+        for (const e of p.offen) {
+            liste.appendChild(START._zeileOffen(e, jetzt));
+        }
+        const zuViele = p.offen.length + p.zu.length > START.ZEILEN_MAX && p.zu.length > 0;
+        const offenZu = !zuViele || START.aufgeklappt[produkt.id];
+        if (zuViele) {
+            liste.appendChild(START._schrankKnopf(produkt.id, p, jetzt, offenZu));
+        }
+        if (offenZu) {
+            for (const e of p.zu) {
+                liste.appendChild(START._zeileZu(e, jetzt));
             }
-        });
-        plus.classList.add("produkt-plus", "up-rund");
-        plus.setAttribute("aria-label", produkt.name + " eintragen");
-        karte.appendChild(plus);
-
-        const fakten = document.createElement("div");
-        fakten.className = "bestand-fakten";
-        const offen = document.createElement("span");
-        if (l.offen) {
-            offen.textContent = "Offen seit " + KASSE.datumKurz(l.offen.geoeffnetAm, jetzt);
-            const von = document.createElement("small");
-            von.textContent = " · " + name(l.offen.geoeffnetVon);
-            offen.appendChild(von);
-        } else {
-            offen.textContent = "Nichts offen";
         }
-        fakten.appendChild(offen);
-        const vorrat = document.createElement("span");
-        vorrat.className = l.abgelaufen > 0 ? "bestand-warnung" : "";
-        vorrat.textContent = BESTAND.vorratText(l, jetzt) + (l.abgelaufen > 0 ? " · " + l.abgelaufen + " abgelaufen" : "");
-        fakten.appendChild(vorrat);
-        for (const a of l.angebote) {
-            const zeile = document.createElement("span");
-            zeile.className = "bestand-angebot";
-            zeile.textContent = BESTAND.angebotText(a, jetzt);
-            fakten.appendChild(zeile);
+        if (liste.childNodes.length) {
+            karte.appendChild(liste);
         }
-        if (dran) {
-            const d = document.createElement("small");
-            d.className = "bestand-dran";
-            d.textContent = "Dran: " + name(dran);
-            fakten.appendChild(d);
-        }
-        karte.appendChild(fakten);
 
         const schnell = START._schnellLeiste(stand, produkt);
         if (schnell) {
@@ -224,7 +218,114 @@ const START = {
             zeile.appendChild(zurueck);
             karte.appendChild(zeile);
         }
+
+        /* „+“ = ich habe eine Packung gekauft (kommt verschlossen in den Schrank). */
+        const plus = DIALOG.knopf("", "haupt", async () => {
+            plus.disabled = true;
+            const eintragId = await S.kaufen(produkt.id, 1);
+            if (eintragId) {
+                START.schnellZeigen(produkt.id, eintragId);
+                return;
+            }
+            /* Abgelehnt (nicht mehr Mitglied, Produkt ausgeblendet …): Knopf wieder frei und
+               sagen, warum nichts passiert — bis 0.7.2 blieb er grau ohne Meldung. */
+            plus.disabled = false;
+            DIALOG.hinweis({ titel: produkt.name, text: "Nicht eingetragen" });
+        });
+        plus.classList.add("produkt-plus", "bk-plus");
+        plus.appendChild(ZUSTAND.zeichen("plus", "bk-plus-zeichen"));
+        plus.appendChild(document.createTextNode("Gekauft"));
+        plus.setAttribute("aria-label", produkt.name + " gekauft");
+        karte.appendChild(plus);
         return karte;
+    },
+
+    /* „Sa 12.10.“ · „heute“ · „gestern“ (mit Jahr, wenn es ein anderes ist). */
+    _tag(ms, jetzt) {
+        const kurz = KASSE.datumKurz(ms, jetzt);
+        if (kurz === "heute" || kurz === "gestern" || kurz === "–") {
+            return kurz;
+        }
+        return ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"][new Date(ms).getDay()] + " " + kurz;
+    },
+
+    /* Eine Zeile der Liste: Haupttext (Tipp → Packungs-Blatt) und rechts EIN Knopf. */
+    _zeile(klasse, marke, oben, unten, knopfText, beiKnopf, eintragId, mengeText) {
+        const zeile = document.createElement("div");
+        zeile.className = "bk-zeile " + klasse;
+        const haupt = document.createElement("button");
+        haupt.type = "button";
+        haupt.className = "bk-zeile-text";
+        haupt.addEventListener("click", () => KASSE_BLATT.packung(eintragId));
+        const m = document.createElement("span");
+        m.className = "bk-marke";
+        m.textContent = marke;
+        haupt.appendChild(m);
+        const mitte = document.createElement("span");
+        mitte.className = "bk-mitte";
+        const b = document.createElement("b");
+        b.textContent = oben + (mengeText || "");
+        mitte.appendChild(b);
+        const s = document.createElement("small");
+        s.textContent = unten;
+        mitte.appendChild(s);
+        haupt.appendChild(mitte);
+        zeile.appendChild(haupt);
+        const knopf = DIALOG.knopf(knopfText, "still", async () => {
+            knopf.disabled = true;
+            const e = await beiKnopf();
+            if (e && e.ok === false) {
+                knopf.disabled = false;
+                DIALOG.hinweis({ titel: knopfText, text: e.text || "Abgelehnt" });
+            }
+        });
+        knopf.classList.add("bk-knopf");
+        zeile.appendChild(knopf);
+        return { zeile: zeile, mitte: mitte };
+    },
+
+    _zeileOffen(e, jetzt) {
+        const oben = e.bis ? "bis " + START._tag(e.bis, jetzt) : "offen";
+        const unten = "geöffnet " + START._tag(e.geoeffnetAm, jetzt) + (e.bis ? " · " + BESTAND.restText(e.restTage) : "");
+        const z = START._zeile("bk-offen" + (e.restTage !== null && e.restTage <= 0 ? " bk-drueber" : e.restTage !== null && e.restTage <= 1 ? " bk-knapp" : ""),
+            "Offen", oben, unten, "Leer",
+            () => STEUERUNG.packungAendern(e.id, { leerAm: STEUERUNG.jetzt() }), e.id,
+            e.menge > 1 ? " · " + e.menge + " Stk." : "");
+        if (e.anteil !== null) {
+            const balken = document.createElement("span");
+            balken.className = "bk-balken";
+            const fuell = document.createElement("span");
+            fuell.style.width = Math.round((1 - e.anteil) * 100) + "%";
+            balken.appendChild(fuell);
+            z.mitte.appendChild(balken);
+        }
+        return z.zeile;
+    },
+
+    _zeileZu(e, jetzt) {
+        const oben = e.mhd ? "MHD " + START._tag(e.mhd, jetzt) : "ohne MHD";
+        const unten = "gekauft " + START._tag(e.kauf, jetzt) + (e.abgelaufen ? " · abgelaufen" : "");
+        return START._zeile("bk-zu" + (e.abgelaufen ? " bk-drueber" : ""), "Zu", oben, unten, "Öffnen",
+            () => STEUERUNG.packungAendern(e.id, { geoeffnetAm: STEUERUNG.jetzt() }), e.id,
+            e.menge > 1 ? " · " + e.menge + " Stk." : "").zeile;
+    },
+
+    /* Das Untermenü der verschlossenen Packungen (nur bei langer Liste). */
+    _schrankKnopf(produktId, p, jetzt, offen) {
+        const knopf = document.createElement("button");
+        knopf.type = "button";
+        knopf.className = "bk-schrank";
+        knopf.setAttribute("aria-expanded", offen ? "true" : "false");
+        const mhd = p.zu.find((e) => e.mhd);
+        const text = document.createElement("span");
+        text.textContent = "Im Schrank: " + p.vorrat + (mhd ? " · MHD ab " + START._tag(mhd.mhd, jetzt) : "");
+        knopf.appendChild(text);
+        knopf.appendChild(ZUSTAND.zeichen("pfeil", "bk-schrank-pfeil"));
+        knopf.addEventListener("click", () => {
+            START.aufgeklappt[produktId] = !START.aufgeklappt[produktId];
+            NAVIGATION.veralten("start");
+        });
+        return knopf;
     },
 
     /* ---------------------------------------------------------------- *
