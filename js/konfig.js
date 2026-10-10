@@ -13,7 +13,7 @@
 
 const KONFIG = {
 
-    APP_VERSION: "0.7.0",
+    APP_VERSION: "0.7.1",
 
     /* Name und Nummer im Studio-Intro (die Reihe der Nummern führt das Studio). */
     APP_NAME: "Kaffekasse",

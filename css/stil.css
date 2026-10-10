@@ -45,7 +45,8 @@
     --ebene-intro: 95;
     --leiste-hoehe: 64px;
     --up-bl-oben: 56px;
-    --up-bl-unten: var(--leiste-hoehe);
+    /* Wie in den Spielen: Blätter enden über Leiste UND iPhone-Streifen (0.7.1). */
+    --up-bl-unten: calc(var(--leiste-hoehe) + env(safe-area-inset-bottom, 0px));
     --up-bl-ebene: 40;
     --oben-frei: env(safe-area-inset-top, 0px);
 }
@@ -87,9 +88,15 @@ body {
     padding: var(--oben-frei) 14px 14px;
 }
 
+/* Die Leiste sitzt wie in Blunderluck und Typoluck (0.7.1, Nutzer 10.10.2026: „wie bei
+   Typoluck/Blunderluck“): der iPhone-Streifen kommt zur Höhe DAZU — der Baustein rechnet ihn
+   in seine 64 px hinein, am iPhone blieben so nur rund 30 px für Symbole und Kapsel —, und
+   auf breiten Schirmen stehen die Tabs mittig auf 820 px. */
 .up-leiste {
     z-index: 50;
     flex: none;
+    height: calc(var(--leiste-hoehe) + env(safe-area-inset-bottom, 0px));
+    padding: 0 max(8px, calc((100% - 820px) / 2)) env(safe-area-inset-bottom, 0px);
 }
 
 button {
