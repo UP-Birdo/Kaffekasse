@@ -15,6 +15,8 @@
  *     PRODUKTSUCHE.roh                     die letzte rohe Antwort (nur für die Werkstatt)
  *     PRODUKTSUCHE.preiseZuordnen(antwort) → { gefunden, cent, anzahl, datum } (rein, für Tests)
  *     await PRODUKTSUCHE.preisVorschlag(ean) → { ok, gefunden, cent, … } — wirft nie (Open Prices)
+ *     PRODUKTSUCHE.naehrwerteZuordnen(antwort) → { gefunden, menge, nutri, nova, werte: [...] } (rein)
+ *     await PRODUKTSUCHE.naehrwerte(ean)   → dasselbe mit ok — wirft nie, merkt sich je Nummer (0.9.0)
  *     PRODUKTSUCHE.seite(ean)              Adresse der Produktseite (nur zum Öffnen, kein Abruf)
  *     PRODUKTSUCHE.QUELLE                  der Quellenhinweis (Produkt-Blatt, „Über“)
  *
@@ -149,6 +151,83 @@ const PRODUKTSUCHE = {
                 return { ok: false, gefunden: false };
             }
             return Object.assign({ ok: true }, PRODUKTSUCHE.preiseZuordnen(await antwort.json()));
+        } catch (fehler) {
+            return { ok: false, gefunden: false, netz: true };
+        }
+    },
+
+    /* ---------------------------------------------------------------- *
+     * Nährwerte (seit 0.9.0, Nutzer 12.10.2026: „wenn ich auf das Produkt gehe, soll aus Open Food
+     * Facts auch kcal und andere Fakten gezogen werden, Fett und so“). Beim Öffnen des Produkt-
+     * Blatts frisch geholt, nie in der Kasse gespeichert; je Nummer einmal pro Sitzung. Nur die
+     * Nummer geht hinaus, Zeitlimit wie die Suche.
+     * ---------------------------------------------------------------- */
+
+    NAEHR_FELDER: "nutriments,nutriscore_grade,nova_group,quantity",
+    /* Reihenfolge und Beschriftung wie auf der Packung (je 100 g / 100 ml). */
+    NAEHR_LISTE: [
+        { schluessel: "energy-kcal_100g", titel: "Energie", einheit: "kcal", stellen: 0 },
+        { schluessel: "fat_100g", titel: "Fett", einheit: "g", stellen: 1 },
+        { schluessel: "saturated-fat_100g", titel: "davon gesättigt", einheit: "g", stellen: 1 },
+        { schluessel: "carbohydrates_100g", titel: "Kohlenhydrate", einheit: "g", stellen: 1 },
+        { schluessel: "sugars_100g", titel: "davon Zucker", einheit: "g", stellen: 1 },
+        { schluessel: "fiber_100g", titel: "Ballaststoffe", einheit: "g", stellen: 1 },
+        { schluessel: "proteins_100g", titel: "Eiweiß", einheit: "g", stellen: 1 },
+        { schluessel: "salt_100g", titel: "Salz", einheit: "g", stellen: 2 },
+        { schluessel: "caffeine_100g", titel: "Koffein", einheit: "g", stellen: 2 }
+    ],
+    _naehrMerker: {},
+
+    /* Aus der Antwort → { gefunden, menge, nutri ("A"…"E" | ""), nova (1…4 | 0), werte: [{ titel, text }] }. */
+    naehrwerteZuordnen(antwort) {
+        const a = (antwort && typeof antwort === "object") ? antwort : {};
+        const p = (a.product && typeof a.product === "object") ? a.product : null;
+        const leer = { gefunden: false, menge: "", nutri: "", nova: 0, werte: [] };
+        if (!p || Number(a.status) === 0 || a.status === "failure") {
+            return leer;
+        }
+        const n = (p.nutriments && typeof p.nutriments === "object") ? p.nutriments : {};
+        const werte = [];
+        for (const f of PRODUKTSUCHE.NAEHR_LISTE) {
+            const z = Number(n[f.schluessel]);
+            if (n[f.schluessel] === undefined || n[f.schluessel] === null || n[f.schluessel] === "" || !Number.isFinite(z) || z < 0 || z > 10000) {
+                continue;
+            }
+            const text = (f.stellen ? z.toFixed(f.stellen).replace(/\.?0+$/, "") : String(Math.round(z))).replace(".", ",");
+            werte.push({ titel: f.titel, text: text + " " + f.einheit });
+        }
+        const nutri = String(p.nutriscore_grade || "").trim().toUpperCase();
+        const nova = Number(p.nova_group);
+        return {
+            gefunden: werte.length > 0 || /^[A-E]$/.test(nutri) || (nova >= 1 && nova <= 4),
+            menge: PRODUKTSUCHE._text(p.quantity, 30),
+            nutri: /^[A-E]$/.test(nutri) ? nutri : "",
+            nova: (Number.isInteger(nova) && nova >= 1 && nova <= 4) ? nova : 0,
+            werte: werte
+        };
+    },
+
+    /* Wirft nie: jeder Fehler heißt „keine Nährwerte“ (ok: false; netz: true ohne Netz). */
+    async naehrwerte(eingabe) {
+        const ean = PRODUKTSUCHE.eanPruefen(eingabe);
+        if (!ean) {
+            return { ok: false, gefunden: false };
+        }
+        if (PRODUKTSUCHE._naehrMerker[ean]) {
+            return PRODUKTSUCHE._naehrMerker[ean];
+        }
+        const adresse = PRODUKTSUCHE.BASIS + encodeURIComponent(ean) + ".json?fields=" + encodeURIComponent(PRODUKTSUCHE.NAEHR_FELDER);
+        try {
+            const antwort = await PRODUKTSUCHE._holen(adresse);
+            if (antwort && antwort.status === 404) {
+                return (PRODUKTSUCHE._naehrMerker[ean] = Object.assign({ ok: true }, PRODUKTSUCHE.naehrwerteZuordnen(null)));
+            }
+            if (!antwort || !antwort.ok) {
+                return { ok: false, gefunden: false };
+            }
+            const ergebnis = Object.assign({ ok: true }, PRODUKTSUCHE.naehrwerteZuordnen(await antwort.json()));
+            PRODUKTSUCHE._naehrMerker[ean] = ergebnis;
+            return ergebnis;
         } catch (fehler) {
             return { ok: false, gefunden: false, netz: true };
         }

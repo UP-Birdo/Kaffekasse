@@ -24,6 +24,11 @@
  *     (statistik, produktFakten, prognose) und kurze Texte für Geld und Zeit.
  *   - Seit 0.7.0 dazu `laden`, `angebot`, `mhd` (Kauf-Felder, nur Käufer); Bestand, Angebote
  *     und Tipp rechnet js\bestand.js auf diesem Modell.
+ *   - Seit 0.9.0 `fuer` am Eintrag (Nutzer 12.10.2026: „gekaufte Produkte anderen Mitgliedern
+ *     zuweisen … darf nur der, der es eingetragen hat“): `wer` bleibt, wer eingetragen hat
+ *     (Rechte, Rücknahme); gezählt wird für den KÄUFER (`kaeufer(e)` = fuer, sonst wer). Dazu
+ *     `foto` am Produkt (eigenes Bild, wenn Open Food Facts keins hat) und die Liste der
+ *     eigenen Kassen (`meineNormalisieren`, Bereich nutzer/<uid>/kassen).
  */
 
 const KASSE = {
@@ -53,14 +58,20 @@ const KASSE = {
         [/zucker|süßstoff|honig/, 180]
     ],
 
-    /* Die Felder, die nur schreibt, wer gekauft hat (seit 0.7.0 dazu Laden, Angebot, MHD). */
-    KAUF_FELDER: ["gekauftAm", "preis", "laden", "angebot", "mhd"],
+    /* Die Felder, die nur schreibt, wer gekauft hat (seit 0.7.0 dazu Laden, Angebot, MHD;
+       seit 0.9.0 `fuer` — für welches Mitglied der Kauf zählt). */
+    KAUF_FELDER: ["gekauftAm", "preis", "laden", "angebot", "mhd", "fuer"],
+
+    /* Eigenes Produktfoto (0.9.0): ein kleines JPEG als data-Adresse, höchstens so viele Zeichen
+       (Datenbank-Regel gleich). Verkleinert wird vorher im Blatt (js\produktfoto.js). */
+    FOTO_MAX: 24000,
+    FOTO_VORSATZ: "data:image/jpeg;base64,",
 
     ERKLAERUNG: {
         dran: "Wenigste Käufe · längste Pause · Name",
         ruecknahme: "Nur eigene · kurze Frist",
         zeitraum: "30 Tage oder alles",
-        rechte: "Kauf, Preis, Laden, MHD: Käufer · Geöffnet und leer: alle"
+        rechte: "Kauf, Preis, Laden, MHD, Für: wer eingetragen hat · Geöffnet und leer: alle"
     },
 
     /* ---------------------------------------------------------------- *
@@ -114,8 +125,16 @@ const KASSE = {
             angelegtVon: KASSE._text(p.angelegtVon),
             angelegtAm: KASSE._zahl(p.angelegtAm),
             aktiv: p.aktiv !== false,
-            ...(KASSE._offenTage(p.offenTage) ? { offenTage: KASSE._offenTage(p.offenTage) } : {})
+            ...(KASSE._offenTage(p.offenTage) ? { offenTage: KASSE._offenTage(p.offenTage) } : {}),
+            ...(KASSE.fotoPruefen(p.foto) ? { foto: p.foto } : {})
         };
+    },
+
+    /* Ein gültiges eigenes Foto (0.9.0): JPEG als data-Adresse, nicht zu groß. → true/false. */
+    fotoPruefen(wert) {
+        return typeof wert === "string" && wert.indexOf(KASSE.FOTO_VORSATZ) === 0
+            && wert.length > KASSE.FOTO_VORSATZ.length && wert.length <= KASSE.FOTO_MAX
+            && /^[A-Za-z0-9+/=]+$/.test(wert.slice(KASSE.FOTO_VORSATZ.length));
     },
 
     /* Ganze Tage 1 … OFFEN_TAGE_MAX, sonst 0 (= nicht gesetzt). */
@@ -181,6 +200,9 @@ const KASSE = {
         if (KASSE._zahl(e.mhd) > 0) {
             eintrag.mhd = KASSE._zahl(e.mhd);
         }
+        if (KASSE._text(e.fuer) && e.fuer !== e.wer) {
+            eintrag.fuer = KASSE._text(e.fuer);
+        }
         for (const art of ["geoeffnet", "leer"]) {
             if (KASSE._zahl(e[art + "Am"]) > 0) {
                 eintrag[art + "Am"] = KASSE._zahl(e[art + "Am"]);
@@ -188,6 +210,11 @@ const KASSE = {
             }
         }
         return eintrag;
+    },
+
+    /* Für wen der Kauf zählt (0.9.0): das zugewiesene Mitglied, sonst wer eingetragen hat. */
+    kaeufer(eintrag) {
+        return eintrag ? (eintrag.fuer || eintrag.wer || "") : "";
     },
 
     /* Wann gekauft: das gewählte Kaufdatum, sonst der Zeitpunkt des „+“. */
@@ -305,6 +332,23 @@ const KASSE = {
         return { stand: s, aenderungen: { ["mitglieder/" + kennung]: neu, geaendertAm: s.geaendertAm } };
     },
 
+    /* Die eigenen Kassen am Konto (0.9.0, Nutzer 12.10.2026: „die Kassen, wo man drin ist, sollen
+       auf dem Profil gespeichert werden, nicht immer den Code neu eingeben“). In der Datenbank unter
+       `nutzer/<uid>/kassen/<kasseId>` = { name, seit } (nur das Konto selbst liest und schreibt —
+       die Konten selbst bekommen kein Feld, eiserne Regel). → [{ id, name, seit }], neueste zuerst. */
+    meineNormalisieren(roh) {
+        const r = KASSE._objekt(roh);
+        return Object.keys(r).filter((id) => /^[0-9a-z]{1,16}-[a-z0-9]{4}$/.test(id)).map((id) => {
+            const k = KASSE._objekt(r[id]);
+            return { id: id, name: KASSE._text(k.name, KASSE.NAME_MAX) || "Kasse", seit: KASSE._zahl(k.seit) };
+        }).sort((a, b) => b.seit - a.seit || a.name.localeCompare(b.name, "de", { sensitivity: "base" }));
+    },
+
+    /* Der Eintrag einer Kasse in dieser Liste. */
+    meineEintrag(stand, zeit) {
+        return { name: KASSE._text(stand && stand.name, KASSE.NAME_MAX) || "Kasse", seit: KASSE._zahl(zeit) };
+    },
+
     /* Die Stand-Marke zieht immer hoch, auch wenn die Uhr des Geräts zurückhängt. */
     _marke(stand, zeit) {
         return Math.max(KASSE._zahl(zeit), (KASSE._zahl(stand && stand.geaendertAm)) + 1);
@@ -329,7 +373,8 @@ const KASSE = {
     },
 
     /* Name und „nach dem Öffnen haltbar“ ändern (0.8.0) — jedes Mitglied. `felder`: { name,
-       offenTage } — undefined = unverändert, offenTage 0/null = zurück zum Vorschlag. */
+       offenTage, foto } — undefined = unverändert, offenTage 0/null = zurück zum Vorschlag,
+       foto null/"" = eigenes Foto weg (0.9.0); ein ungültiges Foto lehnt alles ab (null). */
     produktAendern(stand, produktId, felder, uid, zeit) {
         const s = KASSE.normalisieren(stand);
         const alt = s.produkte[produktId];
@@ -358,6 +403,20 @@ const KASSE = {
                     delete neu.offenTage;
                 }
                 aenderungen["produkte/" + produktId + "/offenTage"] = tage || null;
+            }
+        }
+        if (f.foto !== undefined) {
+            const foto = (f.foto === null || f.foto === "") ? null : (KASSE.fotoPruefen(f.foto) ? f.foto : undefined);
+            if (foto === undefined) {
+                return null;
+            }
+            if (foto !== (alt.foto || null)) {
+                if (foto) {
+                    neu.foto = foto;
+                } else {
+                    delete neu.foto;
+                }
+                aenderungen["produkte/" + produktId + "/foto"] = foto;
             }
         }
         if (Object.keys(aenderungen).length === 0) {
@@ -434,7 +493,8 @@ const KASSE = {
      * Packung: Kaufdatum, Preis, geöffnet, leer (seit 0.6.0)
      *
      * Rechte (Nutzer-Entscheidung 09.10.2026, ERKLAERUNG.rechte):
-     *   gekauftAm, preis, laden, angebot, mhd   nur wer gekauft hat (`wer`; 0.7.0: Laden, Angebot, MHD)
+     *   gekauftAm, preis, laden, angebot, mhd, fuer   nur wer eingetragen hat (`wer`; 0.7.0: Laden,
+     *                                   Angebot, MHD; 0.9.0: fuer = ein anderes Mitglied hat gekauft)
      *   geoeffnetAm/-Von, leerAm/-Von   jedes Mitglied; `…Von` = wer es gesetzt hat
      * `felder`: { gekauftAm, preis, laden, angebot, mhd, geoeffnetAm, leerAm } — undefined =
      * unverändert, null = löschen. Wer „geöffnet“ löscht, löscht „leer“ mit. Das MHD darf in
@@ -467,7 +527,10 @@ const KASSE = {
             if (f[feld] === undefined) {
                 continue;
             }
-            const wert = KASSE._kaufWert(feld, f[feld], zeit);
+            let wert = KASSE._kaufWert(feld, f[feld], zeit);
+            if (feld === "fuer" && wert === alt.wer) {
+                wert = null;   /* für sich selbst = ohne Zuweisung */
+            }
             const bisher = (alt[feld] === undefined) ? null : alt[feld];
             if (wert === bisher) {
                 continue;
@@ -480,6 +543,9 @@ const KASSE = {
             }
             if (feld === "mhd" && wert !== null && !(wert > 0)) {
                 return { fehler: "Datum fehlt" };
+            }
+            if (feld === "fuer" && wert !== null && !KASSE.istMitglied(s, wert)) {
+                return { fehler: "Kein Mitglied" };
             }
             if (wert === null) {
                 delete neu[feld];
@@ -540,6 +606,9 @@ const KASSE = {
         }
         if (feld === "angebot") {
             return wert === true ? true : null;
+        }
+        if (feld === "fuer") {
+            return KASSE._text(wert) || null;
         }
         return zeit(wert);
     },
@@ -615,14 +684,15 @@ const KASSE = {
             summen[uid] = 0;
         }
         for (const e of KASSE.eintraegeVon(s, { produktId: produktId, von: z.von, bis: z.bis })) {
-            summen[e.wer] = (summen[e.wer] || 0) + e.menge;
+            const k = KASSE.kaeufer(e);
+            summen[k] = (summen[k] || 0) + e.menge;
         }
         return summen;
     },
 
     letzterKauf(stand, produktId, uid, zeitraum) {
         const z = zeitraum || {};
-        const eigene = KASSE.eintraegeVon(stand, { produktId: produktId, von: z.von, bis: z.bis }).filter((e) => e.wer === uid);
+        const eigene = KASSE.eintraegeVon(stand, { produktId: produktId, von: z.von, bis: z.bis }).filter((e) => KASSE.kaeufer(e) === uid);
         return eigene.length ? eigene[0].wann : 0;
     },
 
@@ -690,7 +760,7 @@ const KASSE = {
         const z = zeitraum || {};
         return KASSE.eintraegeVon(s, { von: z.von, bis: z.bis, mitZurueckgenommenen: true }).map((e) => Object.assign({}, e, {
             produktName: s.produkte[e.produktId] ? s.produkte[e.produktId].name : "",
-            werName: KASSE.mitgliedName(s, e.wer),
+            werName: KASSE.mitgliedName(s, KASSE.kaeufer(e)),
             gueltig: KASSE.gueltig(e)
         }));
     },
@@ -808,7 +878,8 @@ const KASSE = {
             jePerson[uid] = { packungen: 0, ausgaben: 0 };
         }
         for (const e of liste) {
-            const p = jePerson[e.wer] || (jePerson[e.wer] = { packungen: 0, ausgaben: 0 });
+            const k = KASSE.kaeufer(e);
+            const p = jePerson[k] || (jePerson[k] = { packungen: 0, ausgaben: 0 });
             p.packungen += e.menge;
             p.ausgaben += (typeof e.preis === "number") ? e.preis * e.menge : 0;
         }
@@ -846,7 +917,7 @@ const KASSE = {
                 offen: KASSE.offenePackung(s, produktId),
                 prognose: KASSE.prognose(s, produktId),
                 dran: KASSE.naechsterDran(s, produktId),
-                letzte: liste.slice(0, 5).map((e) => Object.assign({}, e, { werName: KASSE.mitgliedName(s, e.wer) }))
+                letzte: liste.slice(0, 5).map((e) => Object.assign({}, e, { werName: KASSE.mitgliedName(s, KASSE.kaeufer(e)) }))
             });
     },
 

@@ -83,7 +83,8 @@ const APP = {
         NAVIGATION.alleVeralten();
         NAVIGATION.wechseln("start");
         NAVIGATION.auffrischen();
-        APP.kontenLaden().then(() => STEUERUNG.nachsenden()).then(() => STEUERUNG.laden());
+        /* Seit 0.9.0 zuerst die eigenen Kassen am Konto: auf neuem Gerät kein Code mehr nötig. */
+        APP.kontenLaden().then(() => STEUERUNG.nachsenden()).then(() => STEUERUNG.kassenAbgleichen()).then(() => STEUERUNG.laden());
     },
 
     /* Die Werkstatt (nur localhost, `?werkstatt`): lädt js\werkstatt.js nach — Attrappe der

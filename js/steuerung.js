@@ -8,6 +8,8 @@
  *     STEUERUNG.hatKasse() · .stand · .zustand ("leer" | "laden" | "ok" | "fehler")
  *     await STEUERUNG.laden()                die Kasse vom Server (sonst der Stand vom Gerät)
  *     await STEUERUNG.anlegen(name) / beitreten(codeEingabe) / verlassen()
+ *     await STEUERUNG.kassenAbgleichen() · .meine · await wechseln(kasseId)   (0.9.0: die eigenen
+ *                                            Kassen am Konto — kein Code mehr auf neuem Gerät)
  *     await STEUERUNG.kaufen(produktId, menge) → eintragId / zuruecknehmen(eintragId)
  *     STEUERUNG.vorbelegung(eintragId) / await vorbelegungUebernehmen(eintragId, angebot)   (0.7.0)
  *     await STEUERUNG.produktAnlegen(felder) / produktAusblenden(produktId)
@@ -29,6 +31,10 @@ const STEUERUNG = {
 
     kasseId: null,
     stand: null,
+    /* Die eigenen Kassen am Konto (0.9.0): [{ id, name, seit }]; `meineGeladen` = die Liste kam
+       vom Server (erst dann wird eine fehlende Kasse nachgetragen). */
+    meine: [],
+    meineGeladen: false,
     zustand: "leer",
     technik: "",
     takt: null,
@@ -112,6 +118,8 @@ const STEUERUNG = {
 
     /* Beim Abmelden oder Verlassen: die Kasse gehört zum Konto, nicht zum Gerät. */
     vergessen() {
+        STEUERUNG.meine = [];
+        STEUERUNG.meineGeladen = false;
         STEUERUNG.kasseId = null;
         STEUERUNG.stand = null;
         STEUERUNG.zustand = "leer";
@@ -192,6 +200,10 @@ const STEUERUNG = {
             STEUERUNG.technik = "";
             STEUERUNG.merken();
             STEUERUNG._offline(false);
+            /* Wer schon vor 0.9.0 Mitglied war, bekommt die Kasse hier in seine Liste. */
+            if (STEUERUNG.meineGeladen && !STEUERUNG.meine.some((k) => k.id === STEUERUNG.kasseId)) {
+                STEUERUNG._meineMerken(STEUERUNG.kasseId, stand);
+            }
         } catch (fehler) {
             if (STEUERUNG._istNetz(fehler)) {
                 STEUERUNG._offline(true);
@@ -234,6 +246,96 @@ const STEUERUNG = {
     },
 
     /* ---------------------------------------------------------------- *
+     * Die eigenen Kassen am Konto (0.9.0, Nutzer 12.10.2026: „die Kassen, wo man drin ist, sollen
+     * auf dem Profil gespeichert werden, nicht immer den Code neu eingeben“). Liegt im Bereich
+     * `kaffekasse` (nutzer/<uid>/kassen), nicht im Konto — Kaffekasse legt dort keine Felder an.
+     * Alles hier ist „am besten Wege“: schlägt es fehl (kein Netz, Regel noch alt), bleibt die App
+     * wie bisher bei der Kasse am Gerät.
+     * ---------------------------------------------------------------- */
+
+    /* Nach der Anmeldung: die Liste holen; ohne Kasse am Gerät die zuletzt beigetretene nehmen. */
+    async kassenAbgleichen() {
+        const speicher = STEUERUNG._speicher();
+        const uid = STEUERUNG._uid();
+        if (!speicher || !uid || typeof speicher.meineLaden !== "function") {
+            return;
+        }
+        try {
+            STEUERUNG.meine = KASSE.meineNormalisieren(await speicher.meineLaden(uid));
+            STEUERUNG.meineGeladen = true;
+        } catch (fehler) {
+            return;
+        }
+        if (!STEUERUNG.kasseId && STEUERUNG.meine.length) {
+            STEUERUNG.kasseId = STEUERUNG.meine[0].id;
+            STEUERUNG.stand = null;
+            STEUERUNG.zustand = "laden";
+            STEUERUNG.merken();
+        }
+        STEUERUNG._melden();
+    },
+
+    async _meineMerken(kasseId, stand) {
+        const speicher = STEUERUNG._speicher();
+        const uid = STEUERUNG._uid();
+        if (!speicher || !uid || !kasseId || typeof speicher.meineSetzen !== "function") {
+            return;
+        }
+        const eintrag = KASSE.meineEintrag(stand, STEUERUNG.jetzt());
+        const roh = {};
+        for (const k of STEUERUNG.meine) {
+            roh[k.id] = { name: k.name, seit: k.seit };
+        }
+        roh[kasseId] = eintrag;
+        STEUERUNG.meine = KASSE.meineNormalisieren(roh);
+        try {
+            await speicher.meineSetzen(uid, kasseId, eintrag);
+        } catch (fehler) {
+            /* Nächster Versuch beim nächsten Laden auf einem anderen Gerät (die Liste dort fehlt sie). */
+        }
+    },
+
+    async _meineVergessen(kasseId) {
+        const speicher = STEUERUNG._speicher();
+        const uid = STEUERUNG._uid();
+        STEUERUNG.meine = STEUERUNG.meine.filter((k) => k.id !== kasseId);
+        if (!speicher || !uid || !kasseId || typeof speicher.meineSetzen !== "function") {
+            return;
+        }
+        try {
+            await speicher.meineSetzen(uid, kasseId, null);
+        } catch (fehler) {
+            /* egal: beim Wechseln fällt sie ohnehin heraus (kein Mitglied mehr) */
+        }
+    },
+
+    /* Zu einer anderen eigenen Kasse wechseln (Kasse-Blatt, Liste „Meine Kassen“). Wartende
+       Änderungen tragen schon ihre `kassen/<id>/`-Pfade und gehen trotzdem hinaus. */
+    async wechseln(kasseId) {
+        if (!kasseId || kasseId === STEUERUNG.kasseId) {
+            return { ok: true };
+        }
+        STEUERUNG.kasseId = kasseId;
+        STEUERUNG.stand = null;
+        STEUERUNG.zustand = "laden";
+        STEUERUNG.technik = "";
+        STEUERUNG.merken();
+        STEUERUNG._melden();
+        const meine = STEUERUNG.meine;
+        const geladen = STEUERUNG.meineGeladen;
+        await STEUERUNG.laden();
+        if (!STEUERUNG.kasseId) {
+            /* Die Kasse gibt es nicht mehr: aus der Liste (laden hat per vergessen geleert). */
+            STEUERUNG.meine = meine;
+            STEUERUNG.meineGeladen = geladen;
+            await STEUERUNG._meineVergessen(kasseId);
+            STEUERUNG._melden();
+            return { ok: false, text: "Kasse nicht da" };
+        }
+        return { ok: STEUERUNG.zustand !== "fehler", text: STEUERUNG.technik };
+    },
+
+    /* ---------------------------------------------------------------- *
      * Kasse anlegen, beitreten, verlassen
      * ---------------------------------------------------------------- */
 
@@ -256,6 +358,7 @@ const STEUERUNG = {
         STEUERUNG.merken();
         STEUERUNG._gespeichert();
         STEUERUNG._melden();
+        await STEUERUNG._meineMerken(neu.kasseId, neu.stand);
         return { ok: true };
     },
 
@@ -290,6 +393,9 @@ const STEUERUNG = {
         STEUERUNG.merken();
         STEUERUNG._melden();
         await STEUERUNG.laden();
+        if (STEUERUNG.stand) {
+            await STEUERUNG._meineMerken(kasseId, STEUERUNG.stand);
+        }
         return { ok: STEUERUNG.zustand !== "fehler", text: STEUERUNG.technik };
     },
 
@@ -308,7 +414,14 @@ const STEUERUNG = {
             return STEUERUNG._absage(fehler);
         }
         WARTESCHLANGE.leeren();
+        const weg = STEUERUNG.kasseId;
+        const meine = STEUERUNG.meine;
+        const geladen = STEUERUNG.meineGeladen;
         STEUERUNG.vergessen();
+        STEUERUNG.meine = meine;
+        STEUERUNG.meineGeladen = geladen;
+        await STEUERUNG._meineVergessen(weg);
+        STEUERUNG._melden();
         return { ok: true };
     },
 

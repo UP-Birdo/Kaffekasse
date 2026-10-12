@@ -163,6 +163,8 @@ class SpeicherGemeinsam {
  *         codes/<CODE> = <kasseId>              (lesbar für Angemeldete, einmal schreibbar)
  *         kassen/<kasseId>/ { name, code, erstelltVon, erstelltAm, geaendertAm,
  *                             mitglieder/<uid>, produkte/<id>, eintraege/<id> }
+ *         nutzer/<uid>/kassen/<kasseId> = { name, seit }   (seit 0.9.0: die eigenen Kassen,
+ *                                                         nur das Konto selbst liest/schreibt)
  *
  * Geschrieben wird nur als Mehrpfad-Änderung der eigenen Knoten (KASSE liefert die Pfade
  * relativ zur Kasse, `praefix` setzt `kassen/<id>/` davor). Die ganze Kasse schreibt nur
@@ -207,6 +209,16 @@ class SpeicherKasse extends SpeicherGemeinsam {
 
     async aendern(kasseId, aenderungen) {
         return this.teilSchreiben(SpeicherKasse.praefix(kasseId, aenderungen));
+    }
+
+    /* Die eigenen Kassen (0.9.0) — roh, KASSE.meineNormalisieren macht die Liste daraus. */
+    async meineLaden(uid) {
+        return this.teilLaden("nutzer/" + encodeURIComponent(String(uid || "")) + "/kassen");
+    }
+
+    /* Eine Kasse in die eigene Liste setzen ({ name, seit }) oder herausnehmen (null). */
+    async meineSetzen(uid, kasseId, eintrag) {
+        return this.teilSchreiben({ ["nutzer/" + String(uid || "") + "/kassen/" + String(kasseId || "")]: eintrag || null });
     }
 }
 

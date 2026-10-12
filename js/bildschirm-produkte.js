@@ -11,6 +11,8 @@
  *
  * Seit 0.7.0 im Blatt dazu: Bestand (reicht bis, Vorrat, Tipp, Lagerzeit verschlossen Ø/max,
  * MHD) und Angebote (Quote, Normalpreis, Ø Ersparnis, Ø Abstand, nächstes, je Laden).
+ * Seit 0.9.0: Nährwerte je 100 g aus Open Food Facts (beim Öffnen frisch, still ohne Netz) und
+ * ein eigenes Foto unter „Einstellen“ (js\produktfoto.js). Dasselbe Blatt öffnet der Bestand.
  *
  * Zahlen aus dem Modell (KASSE.statistik, KASSE.produktFakten, BESTAND.lage); geschrieben über
  * die Steuerung.
@@ -44,7 +46,7 @@ const PRODUKTE = {
         if (st.produkte.length === 0) {
             const karte = document.createElement("section");
             karte.className = "karte";
-            karte.appendChild(ZUSTAND.leer({ zeichen: "paket", text: "Noch kein Produkt", aktion: { text: "Produkt", bei: () => KASSE_BLATT.produkt() } }));
+            karte.appendChild(ZUSTAND.leer({ zeichen: "paket", text: "Noch kein Produkt", aktion: { text: "Neues Produkt", bei: () => KASSE_BLATT.produkt() } }));
             ort.appendChild(karte);
             return;
         }
@@ -56,7 +58,7 @@ const PRODUKTE = {
         ort.appendChild(liste);
         const fuss = document.createElement("div");
         fuss.className = "start-fuss";
-        fuss.appendChild(DIALOG.knopf("Produkt", "still", () => KASSE_BLATT.produkt()));
+        fuss.appendChild(DIALOG.knopf("Neues Produkt", "still", () => KASSE_BLATT.produkt()));
         ort.appendChild(fuss);
     },
 
@@ -101,6 +103,101 @@ const PRODUKTE = {
         return zeile;
     },
 
+    /* Nährwerte als Tabelle wie auf der Packung (je 100 g / 100 ml), oben Nutri-Score und Menge. */
+    _naehrwerteZeichnen(ort, n) {
+        ort.textContent = "";
+        const h = document.createElement("h3");
+        h.className = "blatt-abschnitt-titel";
+        h.textContent = "Nährwerte · 100 g";
+        ort.appendChild(h);
+        const marken = [];
+        if (n.nutri) {
+            marken.push({ text: "Nutri-Score " + n.nutri, klasse: "nutri nutri-" + n.nutri.toLowerCase() });
+        }
+        if (n.nova) {
+            marken.push({ text: "NOVA " + n.nova, klasse: "" });
+        }
+        if (n.menge) {
+            marken.push({ text: n.menge, klasse: "" });
+        }
+        if (marken.length) {
+            const reihe = document.createElement("div");
+            reihe.className = "naehr-marken";
+            for (const m of marken) {
+                const s = document.createElement("span");
+                s.className = "naehr-marke " + m.klasse;
+                s.textContent = m.text;
+                reihe.appendChild(s);
+            }
+            ort.appendChild(reihe);
+        }
+        if (n.werte.length) {
+            const tabelle = document.createElement("dl");
+            tabelle.className = "naehr-tabelle";
+            for (const w of n.werte) {
+                const dt = document.createElement("dt");
+                dt.textContent = w.titel;
+                if (/^davon/.test(w.titel)) {
+                    dt.className = "naehr-davon";
+                }
+                const dd = document.createElement("dd");
+                dd.textContent = w.text;
+                tabelle.appendChild(dt);
+                tabelle.appendChild(dd);
+            }
+            ort.appendChild(tabelle);
+        }
+        ort.hidden = false;
+    },
+
+    /* Eigenes Foto (0.9.0): wählen (Gerät: Foto machen oder Mediathek), verkleinern, speichern;
+       „Foto weg“, wenn eins da ist. Ohne eigenes Foto gilt das Bild aus Open Food Facts. */
+    _fotoTeil(ort, produkt) {
+        if (typeof PRODUKTFOTO === "undefined") {
+            return;
+        }
+        const fehler = document.createElement("div");
+        fehler.className = "feld-fehler";
+        fehler.setAttribute("role", "alert");
+        const knoepfe = [];
+        const waehlen = DIALOG.knopf(produkt.foto ? "Foto ändern" : "Eigenes Foto", "still", async () => {
+            fehler.textContent = "";
+            const datei = await PRODUKTFOTO.waehlen();
+            if (!datei) {
+                return;
+            }
+            waehlen.disabled = true;
+            const foto = await PRODUKTFOTO.verkleinern(datei);
+            if (!foto) {
+                waehlen.disabled = false;
+                fehler.textContent = "Bild nicht lesbar";
+                return;
+            }
+            const ok = await STEUERUNG.produktAendern(produkt.id, { foto: foto });
+            waehlen.disabled = false;
+            if (!ok) {
+                fehler.textContent = "Abgelehnt";
+                return;
+            }
+            UPCREW_BLATT.schliessen();
+            PRODUKTE.blatt(produkt.id);
+        });
+        knoepfe.push(waehlen);
+        if (produkt.foto) {
+            knoepfe.push(DIALOG.knopf("Foto weg", "still", async () => {
+                const ok = await STEUERUNG.produktAendern(produkt.id, { foto: null });
+                if (!ok) {
+                    fehler.textContent = "Abgelehnt";
+                    return;
+                }
+                UPCREW_BLATT.schliessen();
+                PRODUKTE.blatt(produkt.id);
+            }));
+        }
+        ort.appendChild(KASSE_BLATT._knoepfe(...knoepfe));
+        ort.appendChild(fehler);
+    },
+
     /* Das Blatt mit allen Fakten eines Produkts. */
     blatt(produktId) {
         const S = STEUERUNG;
@@ -133,6 +230,19 @@ const PRODUKTE = {
                 text.appendChild(unter);
                 kopf.appendChild(text);
                 el.appendChild(kopf);
+
+                /* Nährwerte (0.9.0): Platz sofort, Inhalt kommt still nach — oder der Platz bleibt weg. */
+                const naehr = document.createElement("section");
+                naehr.className = "blatt-abschnitt naehrwerte";
+                naehr.hidden = true;
+                el.appendChild(naehr);
+                if (f.produkt.ean && typeof PRODUKTSUCHE !== "undefined") {
+                    PRODUKTSUCHE.naehrwerte(f.produkt.ean).then((n) => {
+                        if (n && n.gefunden && naehr.isConnected) {
+                            PRODUKTE._naehrwerteZeichnen(naehr, n);
+                        }
+                    });
+                }
 
                 el.appendChild(STATISTIK.kacheln([
                     { titel: "Packungen", wert: String(f.packungen) },
@@ -222,6 +332,7 @@ const PRODUKTE = {
                     nameFeld.fehler.textContent = "Abgelehnt";
                 });
                 einstellen.appendChild(KASSE_BLATT._knoepfe(speichern));
+                PRODUKTE._fotoTeil(einstellen, f.produkt);
 
                 const daten = KASSE_BLATT._abschnitt(el, "Produktdaten");
                 const seite = (typeof PRODUKTSUCHE !== "undefined") ? PRODUKTSUCHE.seite(f.produkt.ean) : "";

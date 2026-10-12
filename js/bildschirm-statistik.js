@@ -5,8 +5,10 @@
  *   Kacheln    Packungen, Ausgaben, Ø Preis, Ø Lager (Kauf → geöffnet), Ø Verbrauch
  *              (geöffnet → leer), je Woche
  *   Personen   Packungen und Ausgaben je Person (Balken aus Bordmitteln)
- *   Produkte   je Produkt: Packungen, Ø Preis, offen seit, „leer ~“ (Prognose), dran, Balken;
- *              seit 0.7.0 Läden, Angebotsquote, Ø Ersparnis, nächstes Angebot, Lager, MHD
+ *   Produkte   seit 0.9.0 je Produkt nur EINE schlanke Zeile (Bild, Name, Packungen, Dran) —
+ *              Tipp → Blatt mit allen Zahlen im Zeitraum (Nutzer 12.10.2026: „nicht so überladen
+ *              mit Text, sondern drauf drücken und dahinter Popup mit mehr Fakten“): Packungen,
+ *              Ø Preis, offen seit, „leer ~“, dran, Läden, Angebote, Lager, MHD, Balken je Person
  *   Verlauf    darunter wie bisher (VERLAUF.liste), jede Zeile → Packungs-Blatt
  * Kurze Beschriftungen, keine Sätze. Alle Zahlen aus dem Modell (KASSE.statistik,
  * KASSE.uebersicht) — der Bildschirm rechnet nichts.
@@ -138,76 +140,94 @@ const STATISTIK = {
             return;
         }
         const uid = (typeof KONTO !== "undefined") ? KONTO.uid() : null;
-        const balken = {};
-        for (const u of KASSE.uebersicht(stand, zeitraum)) {
-            balken[u.produkt.id] = u.personen;
-        }
         STATISTIK._zwischentitel(ort, "Produkte");
+        const liste = document.createElement("div");
+        liste.className = "produkt-liste";
         for (const p of st.produkte) {
-            const karte = document.createElement("section");
-            karte.className = "uebersicht";
-            karte.setAttribute("aria-label", p.produkt.name);
-
-            const kopf = document.createElement("div");
-            kopf.className = "uebersicht-kopf";
+            const zeile = document.createElement("button");
+            zeile.type = "button";
+            zeile.className = "produkt-zeile";
+            zeile.setAttribute("aria-label", p.produkt.name + " · Statistik");
+            zeile.addEventListener("click", () => STATISTIK.produktBlatt(p.produkt.id));
+            zeile.appendChild(START._produktBild(p.produkt));
+            const text = document.createElement("span");
+            text.className = "produkt-text";
             const name = document.createElement("b");
+            name.className = "produkt-name";
             name.textContent = p.produkt.name;
-            const rechts = document.createElement("span");
-            rechts.textContent = p.dran ? "Dran: " + (p.dran === uid ? "Du" : KASSE.mitgliedName(stand, p.dran)) : "";
-            kopf.appendChild(name);
-            kopf.appendChild(rechts);
-            karte.appendChild(kopf);
-
-            const fakten = [p.packungen + (p.packungen === 1 ? " Packung" : " Packungen")];
-            if (p.schnittPreis !== null) {
-                fakten.push("Ø " + KASSE.euro(p.schnittPreis));
-            }
-            if (p.offen) {
-                fakten.push("offen seit " + KASSE.datumKurz(p.offen.geoeffnetAm, jetzt));
-            }
-            if (p.prognose) {
-                /* Liegt die Schätzung schon hinter uns, ist die Packung länger offen als üblich. */
-                fakten.push(p.prognose < jetzt ? "leer? überfällig" : "leer ~" + KASSE.datumKurz(p.prognose, jetzt));
-            }
-            const zeile = document.createElement("div");
-            zeile.className = "uebersicht-fakten";
-            zeile.textContent = fakten.join(" · ");
-            karte.appendChild(zeile);
-
-            /* Seit 0.7.0: Läden, Angebote, Lagerzeit verschlossen, MHD (BESTAND.lage). */
-            const l = BESTAND.lage(stand, p.produkt.id, jetzt);
-            const mehr = [];
-            if (l.laeden.length) {
-                mehr.push(l.laeden.map((x) => x.laden).join(", "));
-            }
-            if (l.angebotsquote) {
-                mehr.push("Angebot " + BESTAND.prozent(l.angebotsquote));
-            }
-            if (l.ersparnis > 0) {
-                mehr.push("Ø -" + KASSE.euro(l.ersparnis));
-            }
-            if (l.naechstesAngebot) {
-                mehr.push("nächstes ~" + KASSE.datumKurz(l.naechstesAngebot.naechstes, jetzt));
-            }
-            if (l.lagerMaxMs !== null) {
-                mehr.push("Lager max " + KASSE.dauerText(l.lagerMaxMs));
-            }
-            if (l.naechstesMhd || l.abgelaufen) {
-                mehr.push("MHD " + BESTAND.mhdLageText(l, jetzt));
-            }
-            if (mehr.length) {
-                const zeile2 = document.createElement("div");
-                zeile2.className = "uebersicht-fakten";
-                zeile2.textContent = mehr.join(" · ");
-                karte.appendChild(zeile2);
-            }
-
-            for (const person of balken[p.produkt.id] || []) {
-                karte.appendChild(STATISTIK._balkenZeile(person.uid === uid ? "Du" : person.name, person.anteil,
-                    String(person.menge), person.uid === uid));
-            }
-            ort.appendChild(karte);
+            text.appendChild(name);
+            const zahlen = document.createElement("span");
+            zahlen.className = "produkt-zahlen";
+            zahlen.textContent = [p.packungen + (p.packungen === 1 ? " Packung" : " Packungen"),
+                p.dran ? "Dran: " + (p.dran === uid ? "Du" : KASSE.mitgliedName(stand, p.dran)) : ""].filter(Boolean).join(" · ");
+            text.appendChild(zahlen);
+            zeile.appendChild(text);
+            zeile.appendChild(ZUSTAND.zeichen("pfeil", "produkt-pfeil"));
+            liste.appendChild(zeile);
         }
+        ort.appendChild(liste);
+    },
+
+    /* Das Blatt mit allen Zahlen EINES Produkts im gewählten Zeitraum (0.9.0). Unten der Weg zu
+       den Fakten des Produkts (Bestand, Nährwerte, Einstellen — js\bildschirm-produkte.js). */
+    produktBlatt(produktId) {
+        const S = STEUERUNG;
+        if (!S.stand || typeof UPCREW_BLATT === "undefined") {
+            return;
+        }
+        const stand = S.stand;
+        const jetzt = S.jetzt();
+        const zeitraum = KASSE.zeitraum(jetzt, STATISTIK.art);
+        const p = KASSE.statistik(stand, zeitraum).produkte.find((x) => x.produkt.id === produktId);
+        if (!p) {
+            return;
+        }
+        const uid = (typeof KONTO !== "undefined") ? KONTO.uid() : null;
+        const u = KASSE.uebersicht(stand, zeitraum).find((x) => x.produkt.id === produktId);
+        UPCREW_BLATT.oeffnen({
+            titel: p.produkt.name,
+            klasse: "blatt-produktstatistik",
+            inhalt: (el) => {
+                const unter = document.createElement("p");
+                unter.className = "packung-kopf";
+                unter.textContent = zeitraum.art === "30" ? "30 Tage" : "Alles";
+                el.appendChild(unter);
+                STATISTIK._produktFakten(el, stand, p, jetzt, uid);
+                if (u && u.personen.length) {
+                    const wer = KASSE_BLATT._abschnitt(el, "Wer kauft");
+                    const karte = document.createElement("div");
+                    karte.className = "uebersicht";
+                    for (const person of u.personen) {
+                        karte.appendChild(STATISTIK._balkenZeile(person.uid === uid ? "Du" : person.name, person.anteil,
+                            String(person.menge), person.uid === uid));
+                    }
+                    wer.appendChild(karte);
+                }
+                el.appendChild(KASSE_BLATT._knoepfe(
+                    DIALOG.knopf("Ok", "haupt", () => UPCREW_BLATT.schliessen()),
+                    DIALOG.knopf("Produkt", "still", () => PRODUKTE.blatt(produktId))));
+            }
+        });
+    },
+
+    /* Die Zahlen als Kacheln (früher zwei lange Textzeilen auf der Seite). */
+    _produktFakten(el, stand, p, jetzt, uid) {
+        const l = BESTAND.lage(stand, p.produkt.id, jetzt);
+        el.appendChild(STATISTIK.kacheln([
+            { titel: "Packungen", wert: String(p.packungen) },
+            { titel: "Ø Preis", wert: KASSE.euro(p.schnittPreis) },
+            { titel: "Offen seit", wert: p.offen ? KASSE.gross(KASSE.datumKurz(p.offen.geoeffnetAm, jetzt)) : "–" },
+            /* Liegt die Schätzung schon hinter uns, ist die Packung länger offen als üblich. */
+            { titel: "Leer ~", wert: !p.prognose ? "–" : p.prognose < jetzt ? "überfällig" : KASSE.gross(KASSE.datumKurz(p.prognose, jetzt)) },
+            { titel: "Dran", wert: p.dran ? (p.dran === uid ? "Du" : KASSE.mitgliedName(stand, p.dran)) : "–" },
+            { titel: "Je Woche", wert: p.jeWoche === null ? "–" : String(p.jeWoche).replace(".", ",") },
+            { titel: "Angebot", wert: l.angebotsquote ? BESTAND.prozent(l.angebotsquote) : "–" },
+            { titel: "Ø Ersparnis", wert: l.ersparnis > 0 ? KASSE.euro(l.ersparnis) : "–" },
+            { titel: "Nächstes ~", wert: l.naechstesAngebot ? KASSE.gross(KASSE.datumKurz(l.naechstesAngebot.naechstes, jetzt)) : "–" },
+            { titel: "Lager max", wert: KASSE.dauerText(l.lagerMaxMs) },
+            { titel: "MHD", wert: (l.naechstesMhd || l.abgelaufen) ? BESTAND.mhdLageText(l, jetzt) : "–" },
+            { titel: "Läden", wert: l.laeden.length ? l.laeden.map((x) => x.laden).join(", ") : "–" }
+        ]));
     }
 };
 

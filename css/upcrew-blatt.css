@@ -73,11 +73,9 @@ html.up-bl-offen body {
   animation: up-bl-hoch 260ms cubic-bezier(.3, 1.2, .5, 1);
 }
 
-.up-bl-oben-drauf .up-bl-blatt {
-  top: calc(var(--up-bl-oben, 92px) + 14px);
-  left: max(14px, calc((100% - 808px) / 2));
-  right: max(14px, calc((100% - 808px) / 2));
-}
+/* Runde 13 (Nutzer 12.10.2026, gilt in jeder Crew-App): „Nur weil in einem Popup ein anderes Popup geöffnet
+   wird, heißt es nicht, dass das zweite Popup kleiner wird“ — ein Blatt über einem Blatt hat GENAU dieselbe
+   Größe und Lage wie das erste (bis Runde 12: 14 px tiefer und schmaler). Der leichtere Grund bleibt. */
 
 .up-bl-kopf { display: flex; align-items: center; gap: 8px; padding: 12px 12px 8px; flex: none; }
 .up-bl-titel { flex: 1; min-width: 0; margin: 0; font-size: 1.12rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

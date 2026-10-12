@@ -107,11 +107,12 @@ const EINSTELLUNGEN = {
             zeilen: [
                 { zeichen: "info", titel: "Version", rechts: E.wert(KONFIG.APP_VERSION) },
                 speicher,
-                /* Wunsch- und Fehler-Weg: vorbefülltes Formular auf GitHub (Stufe 5). */
-                { zeichen: "hilfe", titel: "Wunsch", rechts: "pfeil",
-                    beiKlick: () => EINSTELLUNGEN.meldungOeffnen(KONFIG.wunsch.vorlageWunsch) },
-                { zeichen: "werkzeug", titel: "Fehler melden", rechts: "pfeil",
-                    beiKlick: () => EINSTELLUNGEN.meldungOeffnen(KONFIG.wunsch.vorlageFehler) },
+                /* Wunsch- und Fehler-Weg: vorbefülltes Formular auf GitHub (Stufe 5). Seit 0.9.0
+                   EINE Zeile mit Zeichen und Namen wie in Blunderluck und Typoluck (Nutzer
+                   12.10.2026: „wieso ist das Icon von Fehler melden nicht dasselbe wie bei den
+                   anderen Crew-Apps?“); die Wahl Wunsch/Fehler danach als kleine Karte. */
+                { zeichen: "hilfe", titel: "Wunsch oder Fehler melden", rechts: "pfeil",
+                    beiKlick: () => EINSTELLUNGEN.meldungWaehlen() },
                 /* Quellenhinweis der Produktdaten (Nutzer 09.10.2026: nicht auf dem Start). */
                 { zeichen: "info", titel: "Quellen", unter: "Open Food Facts", rechts: "pfeil",
                     beiKlick: () => DIALOG.hinweis({ titel: "Quellen", text: PRODUKTSUCHE.QUELLE }) }
@@ -120,6 +121,31 @@ const EINSTELLUNGEN = {
 
         abschnitte.push(ueber);
         E.bauen(ort, "einstellungen", abschnitte, { spiel: KONFIG.APP_NAME });
+    },
+
+    /* Wunsch oder Fehler? Zwei Knöpfe auf einer Karte; Esc/Grund schließt ohne Wahl. */
+    meldungWaehlen() {
+        if (typeof UPCREW_BLATT === "undefined") {
+            EINSTELLUNGEN.meldungOeffnen(KONFIG.wunsch.vorlageWunsch);
+            return;
+        }
+        UPCREW_BLATT.oeffnen({
+            art: "karte",
+            titel: "Melden",
+            inhalt: (el) => {
+                const knoepfe = document.createElement("div");
+                knoepfe.className = "blatt-knoepfe";
+                knoepfe.appendChild(DIALOG.knopf("Wunsch", "haupt", () => {
+                    UPCREW_BLATT.schliessen();
+                    EINSTELLUNGEN.meldungOeffnen(KONFIG.wunsch.vorlageWunsch);
+                }));
+                knoepfe.appendChild(DIALOG.knopf("Fehler", "still", () => {
+                    UPCREW_BLATT.schliessen();
+                    EINSTELLUNGEN.meldungOeffnen(KONFIG.wunsch.vorlageFehler);
+                }));
+                el.appendChild(knoepfe);
+            }
+        });
     },
 
     /* Das GitHub-Formular in einem neuen Fenster, mit Fassung und Stelle vorbefüllt. Die
@@ -161,7 +187,10 @@ const EINSTELLUNGEN = {
                 EINSTELLUNGEN.anpassen = UPCREW_ANPASSEN.zeigen(el, {
                     app: "kaffekasse",
                     alleFrei: true,
-                    shop: false
+                    shop: false,
+                    /* 0.9.0 (Nutzer 12.10.2026: „die Vorschau ist zu groß … die Felder darunter müssen
+                       gescrollt werden“): kleine Vorschau, damit alle Kacheln ohne Rollen passen. */
+                    kompakt: true
                 });
             },
             beimSchliessen: () => {

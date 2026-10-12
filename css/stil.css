@@ -750,9 +750,32 @@ button {
     min-width: 0;
 }
 
-.bk-kopf .bestand-tipp {
-    flex: none;
-    align-self: flex-start;
+/* Bild und Name als EIN Knopf → alle Fakten (0.9.0). */
+.bk-infos {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.bk-infos:focus-visible {
+    outline: 3px solid var(--haupt);
+    outline-offset: 3px;
+    border-radius: var(--rund-klein);
+}
+
+.bk .produkt-text .bestand-tipp {
+    justify-self: start;
+    margin-top: 2px;
 }
 
 .bk-lage {
@@ -897,19 +920,25 @@ button {
     transform: rotate(90deg);
 }
 
+/* Das runde „+“ rechts neben dem Produkt (0.9.0, statt „+ Gekauft“ über die ganze Breite). */
 .bk button.bk-plus {
-    font-size: .95rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    width: 100%;
-    min-height: 44px;
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    min-height: 48px;
+    padding: 0;
+    border-radius: var(--rund-voll);
 }
 
 .bk-plus .bk-plus-zeichen {
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.6;
+    stroke-linecap: round;
 }
 
 /* Text oben über die ganze Breite, die zwei Knöpfe darunter (0.8.0: vorher drückten die Knöpfe
@@ -1366,4 +1395,96 @@ button {
 .werkstatt-offen .up-band-seite,
 .werkstatt-offen .anmeldung {
     padding-top: calc(var(--oben-frei) + 34px);
+}
+
+/* ---------- Nährwerte im Produkt-Blatt (0.9.0, Open Food Facts) ---------- */
+
+.naehrwerte[hidden] {
+    display: none;
+}
+
+.naehr-marken {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.naehr-marke {
+    padding: 3px 10px;
+    font-size: .78rem;
+    font-weight: 700;
+    color: var(--schrift);
+    background: var(--karte-leise);
+    border-radius: var(--rund-voll);
+}
+
+/* Farben des Nutri-Score wie auf der Packung (A dunkelgrün … E rot). */
+.nutri-a { background: #038141; color: #ffffff; }
+.nutri-b { background: #85bb2f; color: #ffffff; }
+.nutri-c { background: #fecb02; color: #1b1b1b; }
+.nutri-d { background: #ee8100; color: #ffffff; }
+.nutri-e { background: #e63e11; color: #ffffff; }
+
+.naehr-tabelle {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    margin: 0;
+    font-size: .88rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.naehr-tabelle dt,
+.naehr-tabelle dd {
+    margin: 0;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--rahmen);
+}
+
+.naehr-tabelle dd {
+    font-weight: 700;
+    text-align: right;
+}
+
+.naehr-tabelle .naehr-davon {
+    padding-left: 14px;
+    color: var(--schrift-leise);
+}
+
+/* ---------- Meine Kassen im Blatt „Kasse“ (0.9.0) ---------- */
+
+.meine-kasse {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-height: 48px;
+    padding: 10px 12px;
+    font: inherit;
+    text-align: left;
+    color: var(--schrift);
+    background: var(--karte);
+    border: 2px solid transparent;
+    border-radius: var(--rund-mittel);
+    box-shadow: 0 3px 0 var(--still-kante);
+    cursor: pointer;
+}
+
+.meine-kasse b {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.meine-kasse-aktiv {
+    border-color: var(--haupt);
+}
+
+.meine-kasse .meine-kasse-zeichen {
+    width: 20px;
+    height: 20px;
+    flex: none;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
 }

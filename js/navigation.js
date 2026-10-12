@@ -1,6 +1,6 @@
 /*
  * navigation.js — Seite oder Blatt: die Tab-Leiste unten, das Seiten-Band (Wischen) und
- * die Blätter über der Seite. Drei Tabs: Statistik, Bestand, Produkte (0.7.0; seit 0.6.0, Nutzer
+ * die Blätter über der Seite. Drei Tabs: Produkte, Bestand, Statistik (0.9.0; 0.7.0 andersherum; seit 0.6.0, Nutzer
  * 09.10.2026: „einstellungen als tab weg“ — die Einstellungen sind ein Blatt hinter dem Profil-Menü).
  *
  * Was in der Leiste steht, ist eine SEITE im Band (nie ein Blatt). Blätter gibt es nur für
@@ -20,12 +20,14 @@
 const NAVIGATION = {
 
     /* Zeichen im 24er-Raster wie in zustand.js. */
-    /* Seit 0.7.0: Statistik · Bestand · Produkte — der Bestand in der MITTE und beim Start
-       offen (wie das Wichtigste in den Spielen). Die Kennung bleibt "start". */
+    /* Seit 0.7.0 der Bestand in der MITTE und beim Start offen (wie das Wichtigste in den
+       Spielen); die Kennung bleibt "start". Seit 0.9.0 Produkte links, Statistik rechts (Nutzer
+       12.10.2026: „Produkte und Statistik sollen die Plätze tauschen“). Die Reihenfolge der
+       Seiten in index.html zieht mit. */
     TABS: [
-        { id: "statistik", name: "Statistik", zeichen: "statistik" },
+        { id: "produkte", name: "Produkte", zeichen: "paket" },
         { id: "start", name: "Bestand", zeichen: "tasse" },
-        { id: "produkte", name: "Produkte", zeichen: "paket" }
+        { id: "statistik", name: "Statistik", zeichen: "statistik" }
     ],
 
     aktiv: "start",

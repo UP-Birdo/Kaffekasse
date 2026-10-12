@@ -9,7 +9,8 @@
 
 const KASSE_BLATT = {
 
-    /* Erstes Blatt: Kasse anlegen (Hauptaktion) oder mit Code beitreten. */
+    /* Erstes Blatt: Kasse anlegen (Hauptaktion) oder mit Code beitreten. Seit 0.9.0 oben die
+       eigenen Kassen am Konto (STEUERUNG.meine) — ein Tipp wechselt, kein Code nötig. */
     kasse() {
         if (typeof UPCREW_BLATT === "undefined") {
             return;
@@ -18,6 +19,7 @@ const KASSE_BLATT = {
             titel: "Kasse",
             klasse: "blatt-kasse",
             inhalt: (el) => {
+                KASSE_BLATT._meineKassen(el);
                 const anlegen = KASSE_BLATT._abschnitt(el, "Neue Kasse");
                 const name = KASSE_BLATT._feld("kasse-name", "Name", "Büro", "text", KASSE.NAME_MAX);
                 anlegen.appendChild(name.zeile);
@@ -53,9 +55,51 @@ const KASSE_BLATT = {
                 });
                 beitreten.appendChild(KASSE_BLATT._knoepfe(knopfBeitreten));
                 KASSE_BLATT._enter(code.feld, knopfBeitreten);
-                name.feld.focus();
+                if (!STEUERUNG.meine.length) {
+                    name.feld.focus();
+                }
             }
         });
+    },
+
+    /* „Meine Kassen“: jede eigene Kasse eine Zeile, die gewählte mit Haken. Nichts, solange
+       die Liste leer ist (neues Konto, Regel noch alt, kein Netz). */
+    _meineKassen(el) {
+        const meine = STEUERUNG.meine;
+        if (!meine.length) {
+            return;
+        }
+        const teil = KASSE_BLATT._abschnitt(el, "Meine Kassen");
+        const fehler = document.createElement("div");
+        fehler.className = "feld-fehler";
+        fehler.setAttribute("role", "alert");
+        for (const k of meine) {
+            const zeile = document.createElement("button");
+            zeile.type = "button";
+            zeile.className = "meine-kasse" + (k.id === STEUERUNG.kasseId ? " meine-kasse-aktiv" : "");
+            zeile.setAttribute("aria-pressed", k.id === STEUERUNG.kasseId ? "true" : "false");
+            const name = document.createElement("b");
+            name.textContent = k.name;
+            zeile.appendChild(name);
+            zeile.appendChild(ZUSTAND.zeichen(k.id === STEUERUNG.kasseId ? "haken" : "pfeil", "meine-kasse-zeichen"));
+            zeile.addEventListener("click", async () => {
+                if (k.id === STEUERUNG.kasseId) {
+                    UPCREW_BLATT.schliessen();
+                    return;
+                }
+                fehler.textContent = "";
+                KASSE_BLATT._beschaeftigt(el, true);
+                const e = await STEUERUNG.wechseln(k.id);
+                KASSE_BLATT._beschaeftigt(el, false);
+                if (e.ok) {
+                    UPCREW_BLATT.schliessen();
+                    return;
+                }
+                fehler.textContent = e.text || "Abgelehnt";
+            });
+            teil.appendChild(zeile);
+        }
+        teil.appendChild(fehler);
     },
 
     /* Die Kasse-Karte (Tipp auf die Kasse im Start, Menü „Kasse“): Name, Code als Etikett,
@@ -83,7 +127,7 @@ const KASSE_BLATT = {
                 const anzahl = Object.keys(stand.mitglieder).length;
                 unter.textContent = "Code · " + anzahl + (anzahl === 1 ? " Mitglied" : " Mitglieder");
                 el.appendChild(unter);
-                const wechseln = DIALOG.knopf("Wechseln", "still", () => {
+                const wechseln = DIALOG.knopf(STEUERUNG.meine.length > 1 ? "Meine Kassen" : "Wechseln", "still", () => {
                     UPCREW_BLATT.schliessen();
                     KASSE_BLATT.kasse();
                 });
@@ -119,11 +163,18 @@ const KASSE_BLATT = {
             inhalt: (el) => {
                 const kopf = document.createElement("p");
                 kopf.className = "packung-kopf";
-                kopf.textContent = name(e.wer) + (e.menge > 1 ? " · " + e.menge + " Packungen" : "")
+                kopf.textContent = name(KASSE.kaeufer(e)) + (e.fuer ? " · eingetragen von " + name(e.wer) : "")
+                    + (e.menge > 1 ? " · " + e.menge + " Packungen" : "")
                     + (KASSE.gueltig(e) ? "" : " · zurück");
                 el.appendChild(kopf);
 
                 const kaufTeil = KASSE_BLATT._abschnitt(el, "Kauf");
+                /* Für wen (0.9.0, Nutzer 12.10.2026: „gekaufte Produkte anderen Mitgliedern
+                   zuweisen, wie nachtragen — das darf nur der, der es eingetragen hat“). */
+                const fuer = KASSE_BLATT._fuerFeld(stand, e, uid, kauf);
+                if (fuer) {
+                    kaufTeil.appendChild(fuer.zeile);
+                }
                 const gekauft = KASSE_BLATT._zeitFeld(kaufTeil, "gekauft", "Gekauft", KASSE.kaufZeit(e), kauf, false);
                 const preis = KASSE_BLATT._feld("packung-preis", "Preis je Packung", "1,29", "text", 9);
                 preis.feld.inputMode = "decimal";
@@ -190,6 +241,9 @@ const KASSE_BLATT = {
                     fehler.textContent = "";
                     const felder = {};
                     const zeitGeaendert = (feld, bisher) => feld.value !== KASSE.alsEingabe(bisher);
+                    if (kauf && fuer && fuer.feld.value !== KASSE.kaeufer(e)) {
+                        felder.fuer = fuer.feld.value === e.wer ? null : fuer.feld.value;
+                    }
                     if (kauf && zeitGeaendert(gekauft, KASSE.kaufZeit(e))) {
                         felder.gekauftAm = gekauft.value ? KASSE.ausEingabe(gekauft.value) : null;
                     }
@@ -254,6 +308,40 @@ const KASSE_BLATT = {
                 }
             }
         });
+    },
+
+    /* Die Auswahl „Gekauft von“: alle Mitglieder (du zuerst), dazu ein ehemaliges Mitglied, falls
+       der Eintrag schon auf es zeigt. Nur bei mehr als einem Mitglied; gesperrt für alle außer
+       dem, der eingetragen hat. → { zeile, feld } oder null. */
+    _fuerFeld(stand, e, uid, darf) {
+        const ids = Object.keys(stand.mitglieder || {});
+        if (ids.length < 2 && !e.fuer) {
+            return null;
+        }
+        const zeile = document.createElement("div");
+        zeile.className = "feld-zeile";
+        const label = document.createElement("label");
+        label.textContent = "Gekauft von";
+        label.htmlFor = "blatt-packung-fuer";
+        const feld = document.createElement("select");
+        feld.id = "blatt-packung-fuer";
+        feld.className = "feld";
+        const sortiert = ids.slice().sort((a, b) => (a === e.wer ? -1 : b === e.wer ? 1 : 0)
+            || KASSE.mitgliedName(stand, a).localeCompare(KASSE.mitgliedName(stand, b), "de", { sensitivity: "base" }));
+        if (KASSE.kaeufer(e) && sortiert.indexOf(KASSE.kaeufer(e)) === -1) {
+            sortiert.push(KASSE.kaeufer(e));
+        }
+        for (const id of sortiert) {
+            const o = document.createElement("option");
+            o.value = id;
+            o.textContent = (id === uid ? "Du" : (KASSE.mitgliedName(stand, id) || "Ehemals"));
+            feld.appendChild(o);
+        }
+        feld.value = KASSE.kaeufer(e);
+        feld.disabled = !darf;
+        zeile.appendChild(label);
+        zeile.appendChild(feld);
+        return { zeile: zeile, feld: feld };
     },
 
     /* Ein Datum mit Uhrzeit, frei wählbar; dazu „Jetzt“ und (wahlfrei) „Löschen“. → das Feld. */

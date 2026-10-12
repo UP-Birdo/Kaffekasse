@@ -117,6 +117,15 @@
 .upa-b-vorschau { position: sticky; top: 0; z-index: 2; padding: 0 12px 10px; background: var(--flaeche); border-bottom: 1px solid var(--rahmen); }
 .upa-b-text { margin: 10px 14px 0; font-size: .8rem; color: var(--schrift-leise); }
 .upa-vorschau.upa-kompakt { min-height: 0; padding: 8px 10px; gap: 8px; }
+/* Runde 13, `kompakt: true`: die Seite selbst mit kleiner Vorschau (Anpassen als Blatt, z. B. Kaffekasse). */
+.upa-seite-kompakt .upa-vorschau-rahmen { padding: 4px 12px 10px; }
+.upa-seite-kompakt .upa-kat-raster { gap: 8px; padding-top: 10px; }
+.upa-seite-kompakt .upa-kat { padding: 7px 8px 6px; }
+.upa-seite-kompakt .upa-kat-bild { width: 40px; height: 40px; }
+.upa-seite-kompakt .upa-kat-bild .up-platz { --up-pl-breite: 40px; }
+.upa-seite-kompakt .upa-kat-bild .upa-darst { width: 30px; height: 30px; }
+.upa-seite-kompakt .upa-strich { display: none; }   /* die Zahl n/m bleibt; der Strich kostet je Reihe 8 px */
+.upa-seite-kompakt .upa-aktion { margin-top: 0; padding-top: 8px; padding-bottom: 10px; }
 .upa-kompakt .upa-v-kopf b { font-size: 1rem; }
 .upa-kompakt .upa-tasten, .upa-kompakt .upa-brett div:nth-child(n+2) { display: none; }
 .upa-kompakt .upa-schach { width: 124px; }
@@ -154,6 +163,9 @@
 .upa-b-aktion .upa-zufall { flex: none; }
 /* Weg in den Shop (nur mit opt.zumShop): genau einer von „Übernehmen“ und „Im Shop ansehen“ steht da. */
 .upa-aktion .upa-zumshop[hidden], .upa-aktion .upa-uebernehmen[hidden] { display: none; }
+/* Runde 13: Würfel von Anfang an unten im Balken (vorn); „Zurück“ erst nach einer Änderung. */
+.upa-aktion .upa-zufall { flex: none; margin-bottom: var(--kn-tiefe); }
+.upa-aktion .upa-zurueck[hidden] { display: none; }
 
 /* Rückfall ohne upcrew-blatt.js: das Blatt als eigene Ebene über der Seite. */
 .upa-blatt-eigen { position: fixed; inset: var(--oben-frei, 0px) 0 var(--up-sm-leiste, 0px) 0; z-index: 60; min-height: 0;

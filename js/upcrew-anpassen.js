@@ -36,7 +36,8 @@
  *         zumShop({ art, wert }) {…},      // optional (NEU 04.10.2026): der Weg in den Shop, siehe unten
  *         sets: { lesen() {…}, schreiben(liste) {…} },  // optional; Standard: Gerät
  *         regale: [ … ],                   // optional: EIGENE Regale nur dieser App (siehe unten)
- *         vorschau(el, entwurf, app) {…}   // optional: eigene Vorschau nach dem Zeichnen (auch im Blatt)
+ *         vorschau(el, entwurf, app) {…},  // optional: eigene Vorschau nach dem Zeichnen (auch im Blatt)
+ *         kompakt: false                   // optional (Runde 13): kleine Vorschau auch auf der Seite
  *     });
  *
  * Eigene Regale (z. B. Blunderluck „Brett“: 2D/3D):
@@ -48,6 +49,14 @@
  *     tab.stufeSetzen(5);  tab.alleFreiSetzen(true);  tab.neuZeichnen();  tab.entfernen();        // wie bisher
  *     tab.zaehlen()                 → { hat, alle } über alle Sammel-Kategorien (für „NN %“)        // NEU
  *     tab.blattOeffnen("schrift");  tab.blattSchliessen();  tab.kategorien()                       // NEU
+ *
+ * RUNDE 13 (Werkbank, Nutzer 12.10.2026, gilt in jeder Crew-App):
+ *   - „Übernehmen und Zurück sollen erst angezeigt werden, wenn man etwas Neues auswählt“ → beide Knöpfe sind
+ *     VERSTECKT (nicht nur grau), solange der Entwurf dem Übernommenen gleicht — auf der Seite und im Blatt.
+ *   - „Der Zufallsknopf steht ganz oben, wieso auch immer“ → der Würfel sitzt von Anfang an UNTEN im Balken
+ *     (`.upa-aktion`, vorn), wie bisher schon in den Spielen über upcrew-sammlung `wuerfelUnten()`.
+ *   - „Die Vorschau ist zu groß, die Felder darunter müssen gescrollt werden“ → wahlfrei `kompakt: true`: die
+ *     Vorschau der Seite in der kleinen Form des Blatts (Kaffekasse, wo Anpassen selbst ein Blatt ist).
  *
  * Freischalten (unverändert): frei ist, was `alleFrei`, `besitz(art, wert)` oder STUFEN[art][wert] <= stufe
  * durchlässt; `UPCREW_ANPASSEN.frei(art, wert, stufe, besitz)` rechnet dasselbe für die App. Bei eigenen Regalen
@@ -208,6 +217,7 @@
        Aussehen teilen (UPCREW_AUSSEHEN.GETEILT, seit 27.09.2026 Standard false: jedes Spiel sein eigenes). */
     const geteilt = A.GETEILT !== false;
     ort.classList.add("upa");
+    ort.classList.toggle("upa-seite-kompakt", !!opt.kompakt);
     ort.innerHTML = `
       <section class="upa-vorschau-rahmen">
         <div class="upa-leiste">
@@ -215,12 +225,12 @@
             <button type="button" data-app="typoluck">Typoluck</button><button type="button" data-app="blunderluck">Blunderluck</button>
           </div>` : ""}
           <span class="upa-hinweis" hidden>${P.html("symbol/schloss", "16x16", { html: sym("schloss") })}<span class="upa-hinweis-text"></span></span>
-          <button type="button" class="up-kn up-zweit up-rund upa-zufall" aria-label="Zufall"><i class="up-led"></i>${P.html("symbol/wuerfel", "24x24", { html: sym("zufall") })}</button>
         </div>
-        <div class="upa-vorschau"></div>
+        <div class="upa-vorschau${opt.kompakt ? " upa-kompakt" : ""}"></div>
       </section>
       <div class="upa-kat-raster"><div class="upa-kat-eigen"></div></div>
       <div class="upa-aktion">
+        <button type="button" class="up-kn up-zweit up-rund upa-zufall" aria-label="Zufall"><i class="up-led"></i>${P.html("symbol/wuerfel", "24x24", { html: sym("zufall") })}</button>
         <button type="button" class="up-kn up-zweit upa-zurueck"><i class="up-led"></i><span>Zurück</span></button>
         <button type="button" class="up-kn up-haupt upa-uebernehmen"><i class="up-led"></i><span>Übernehmen</span></button>
       </div>`;
@@ -285,15 +295,22 @@
       }
       return liste;
     }
-    /* Hinweis, Knöpfe und Würfel — auf der Seite und im Blatt gleich. */
+    /* Hinweis, Knöpfe und Würfel — auf der Seite und im Blatt gleich. Seit Runde 13: ohne Änderung sind
+       „Zurück“ und „Übernehmen“ weg (hidden), nicht nur grau; der Würfel bleibt. */
     function aktionSetzen(wurzel, kat) {
       const zu = gesperrte(), fertig = gleich(entwurf, uebernommen());
       const knopf = wurzel.querySelector(".upa-uebernehmen"), zurueck = wurzel.querySelector(".upa-zurueck");
       if (knopf) {
+        knopf.hidden = fertig;
         knopf.disabled = zu.length > 0 || fertig;
-        knopf.querySelector("span").textContent = zu.length ? "Nicht im Besitz" : fertig ? "Übernommen" : "Übernehmen";
+        knopf.querySelector("span").textContent = zu.length ? "Nicht im Besitz" : "Übernehmen";
       }
-      if (zurueck) zurueck.disabled = fertig;
+      if (zurueck) {
+        zurueck.hidden = fertig;
+        zurueck.disabled = fertig;
+      }
+      const balken = wurzel.querySelector(".upa-aktion");
+      if (balken) balken.classList.toggle("upa-aktion-ruhig", fertig);
       // Weg in den Shop (nur im Blatt, nur mit opt.zumShop): steht dort ein kaufbares Stück dieser Kategorie zur
       // Probe, ersetzt „Im Shop ansehen“ den gesperrten Knopf „Nicht im Besitz“.
       const shopKnopf = kat ? wurzel.querySelector(".upa-zumshop") : null;
@@ -303,7 +320,7 @@
         shopKnopf.hidden = !weg;
         shopKnopf.dataset.art = weg ? weg.art : "";
         shopKnopf.dataset.wert = weg ? weg.wert : "";
-        if (knopf) knopf.hidden = !!weg;
+        if (knopf) knopf.hidden = !!weg || fertig;
       }
       // Würfel aus, wenn es nirgends eine Wahl gibt (z. B. neuer Spieler: nur Grau, S1, K1). Er liegt evtl. schon
       // im Balken (upcrew-sammlung wuerfelUnten) — gesucht wird am ganzen Ort.
@@ -381,8 +398,8 @@
         ${kat.sets ? '<p class="upa-b-text">Ein leerer Platz merkt die Kombination, die gerade in der Vorschau steht.</p>' : ""}
         <div class="upa-raster" data-regal="${kat.k}">${kat.sets ? setsHtml() : liste.map((st) => stueckHtml(kat, st)).join("")}</div>
         <div class="upa-aktion upa-b-aktion">
-          <button type="button" class="up-kn up-zweit upa-zurueck"><i class="up-led"></i><span>Zurück</span></button>
           ${kat.sets ? "" : `<button type="button" class="up-kn up-zweit up-rund upa-zufall" data-kat="${kat.k}" aria-label="Zufall"><i class="up-led"></i>${P.html("symbol/wuerfel", "24x24", { html: sym("zufall") })}</button>`}
+          <button type="button" class="up-kn up-zweit upa-zurueck"><i class="up-led"></i><span>Zurück</span></button>
           <button type="button" class="up-kn up-haupt upa-uebernehmen"><i class="up-led"></i><span>Übernehmen</span></button>
           ${!kat.sets && typeof opt.zumShop === "function" && opt.shop !== false ? '<button type="button" class="up-kn up-haupt upa-zumshop" hidden><i class="up-led"></i><span>Im Shop ansehen</span></button>' : ""}
         </div>`;

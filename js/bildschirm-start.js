@@ -5,8 +5,10 @@
  * Offline-Zeichens (seit 0.8.0 am Profilbild); darunter die Kasse-Karte (Name, Mitglieder,
  * Code als Etikett) und je Produkt eine Bestand-Karte mit seinen PACKUNGEN (0.8.0): offene
  * mit „bis …“ und Balken, verschlossene mit MHD, bei langer Liste hinter „Im Schrank“ — und
- * unten „+ Gekauft“. Nach dem „+“ die kleine Leiste „Laden · Angebot · MHD“ (vorbefüllt);
- * „Eben …“ und jede Zeile öffnen das Packungs-Blatt.
+ * seit 0.9.0 das runde „+“ rechts neben dem Produkt (statt „+ Gekauft“ unten), Tipp auf Bild und
+ * Name öffnet alle Fakten des Produkts (Blatt aus js\bildschirm-produkte.js). Nach dem „+“ die
+ * kleine Leiste „Laden · Angebot · MHD“ (vorbefüllt); „Eben …“ und jede Zeile öffnen das
+ * Packungs-Blatt.
  *
  * Der Bildschirm rechnet nichts — Zahlen und Regeln kommen aus dem Modell (js\kasse.js,
  * js\bestand.js),
@@ -77,15 +79,16 @@ const START = {
         const produkte = KASSE.produkteAktiv(S.stand);
         if (produkte.length === 0) {
             const karte = START._karte(ort, "Produkte");
-            karte.appendChild(ZUSTAND.leer({ zeichen: "plus", text: "Noch kein Produkt", aktion: { text: "Produkt", bei: () => KASSE_BLATT.produkt() } }));
+            karte.appendChild(ZUSTAND.leer({ zeichen: "plus", text: "Noch kein Produkt", aktion: { text: "Neues Produkt", bei: () => KASSE_BLATT.produkt() } }));
             return;
         }
         for (const produkt of produkte) {
             ort.appendChild(START._produktKarte(S.stand, produkt));
         }
+        /* „Neues Produkt“ (0.9.0, Nutzer 12.10.2026: statt nur „Produkt“). */
         const fuss = document.createElement("div");
         fuss.className = "start-fuss";
-        fuss.appendChild(DIALOG.knopf("Produkt", "still", () => KASSE_BLATT.produkt()));
+        fuss.appendChild(DIALOG.knopf("Neues Produkt", "still", () => KASSE_BLATT.produkt()));
         ort.appendChild(fuss);
     },
 
@@ -127,11 +130,13 @@ const START = {
        ist, darunter das Plus; wird die Liste zu lang, nur die offenen, der Rest in einem
        Untermenü“):
          Kopf    Bild · Name · „1 offen · 2 im Schrank“ (Leer rot) · Hinweis nur, wenn etwas zu
-                 tun ist (Jetzt kaufen, MHD bald)
+                 tun ist (Jetzt kaufen, MHD bald) · rechts das runde „+“ (0.9.0). Tipp auf Bild
+                 und Name → alle Fakten (Nutzer 12.10.2026: „bei Bestand soll man auch auf das
+                 Produkt klicken können, um alle Infos zum Produkt selbst zu bekommen“)
          Liste   je OFFENE Packung: „bis Sa 12.10.“, geöffnet am, noch n Tage, Balken, „Leer“;
                  je VERSCHLOSSENE: MHD, gekauft am, „Öffnen“. Mehr als ZEILEN_MAX Zeilen: die
                  offenen bleiben, die verschlossenen klappen hinter „Im Schrank: n ›“
-         Fuß     Kurz-Leiste nach dem Kauf, „Eben …“ und „+ Gekauft“ (= eine neue Packung)
+         Fuß     Kurz-Leiste nach dem Kauf und „Eben …“ (das „+“ sitzt seit 0.9.0 im Kopf)
        Tipp auf eine Zeile → das Packungs-Blatt (Preis, Laden, Daten ändern). Angebote, Reicht
        bis und Dran stehen in Statistik und im Produkt-Blatt. */
     ZEILEN_MAX: 3,
@@ -149,8 +154,13 @@ const START = {
 
         const kopf = document.createElement("div");
         kopf.className = "bk-kopf";
-        kopf.appendChild(START._produktBild(produkt));
-        const text = document.createElement("div");
+        const infos = document.createElement("button");
+        infos.type = "button";
+        infos.className = "bk-infos";
+        infos.setAttribute("aria-label", produkt.name + " · Fakten");
+        infos.addEventListener("click", () => PRODUKTE.blatt(produkt.id));
+        infos.appendChild(START._produktBild(produkt));
+        const text = document.createElement("span");
         text.className = "produkt-text";
         const titel = document.createElement("b");
         titel.className = "produkt-name";
@@ -163,13 +173,15 @@ const START = {
             p.vorrat ? p.vorrat + " im Schrank" : ""
         ].filter(Boolean).join(" · ");
         text.appendChild(lage);
-        kopf.appendChild(text);
         if (l.tipp && (l.tipp.art === "kaufen" || l.tipp.art === "mhd")) {
             const tipp = document.createElement("span");
             tipp.className = "bestand-tipp tipp-" + l.tipp.art;
             tipp.textContent = l.tipp.text;
-            kopf.appendChild(tipp);
+            text.appendChild(tipp);
         }
+        infos.appendChild(text);
+        kopf.appendChild(infos);
+        kopf.appendChild(START._plusKnopf(produkt));
         karte.appendChild(kopf);
 
         const liste = document.createElement("div");
@@ -218,11 +230,16 @@ const START = {
             zeile.appendChild(zurueck);
             karte.appendChild(zeile);
         }
+        return karte;
+    },
 
-        /* „+“ = ich habe eine Packung gekauft (kommt verschlossen in den Schrank). */
+    /* „+“ = ich habe eine Packung gekauft (kommt verschlossen in den Schrank). Seit 0.9.0 ein
+       rundes Zeichen rechts neben dem Produkt (Nutzer 12.10.2026: „statt den großen Gekauft-Knopf
+       soll neben dem Produkt ein + Symbol kommen“) — die EINE Hauptaktion je Karte. */
+    _plusKnopf(produkt) {
         const plus = DIALOG.knopf("", "haupt", async () => {
             plus.disabled = true;
-            const eintragId = await S.kaufen(produkt.id, 1);
+            const eintragId = await STEUERUNG.kaufen(produkt.id, 1);
             if (eintragId) {
                 START.schnellZeigen(produkt.id, eintragId);
                 return;
@@ -234,10 +251,9 @@ const START = {
         });
         plus.classList.add("produkt-plus", "bk-plus");
         plus.appendChild(ZUSTAND.zeichen("plus", "bk-plus-zeichen"));
-        plus.appendChild(document.createTextNode("Gekauft"));
         plus.setAttribute("aria-label", produkt.name + " gekauft");
-        karte.appendChild(plus);
-        return karte;
+        plus.title = "Gekauft";
+        return plus;
     },
 
     /* „Sa 12.10.“ · „heute“ · „gestern“ (mit Jahr, wenn es ein anderes ist). */
@@ -421,10 +437,18 @@ const START = {
         return leiste;
     },
 
-    /* Bild aus der Strichcode-Datenbank, sonst ein Platz mit dem Anfangsbuchstaben. */
+    /* Das eigene Foto (0.9.0), sonst das Bild aus der Strichcode-Datenbank, sonst ein Platz mit
+       dem Anfangsbuchstaben. */
     _produktBild(produkt) {
-        const huelle = document.createElement("div");
+        const huelle = document.createElement("span");
         huelle.className = "produkt-bild";
+        if (KASSE.fotoPruefen(produkt.foto)) {
+            const bild = document.createElement("img");
+            bild.src = produkt.foto;
+            bild.alt = "";
+            huelle.appendChild(bild);
+            return huelle;
+        }
         if (produkt.bild && /^https:\/\//.test(produkt.bild)) {
             const bild = document.createElement("img");
             bild.src = produkt.bild;

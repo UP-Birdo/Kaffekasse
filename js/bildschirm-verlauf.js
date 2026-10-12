@@ -56,7 +56,7 @@ const VERLAUF = {
 
     _zeile(e, uid) {
         const zeile = document.createElement("div");
-        zeile.className = "verlauf-zeile" + (e.gueltig ? "" : " verlauf-zurueck") + (e.wer === uid ? " verlauf-ich" : "");
+        zeile.className = "verlauf-zeile" + (e.gueltig ? "" : " verlauf-zurueck") + (KASSE.kaeufer(e) === uid ? " verlauf-ich" : "");
         const zeit = document.createElement("span");
         zeit.className = "verlauf-zeit";
         zeit.textContent = KASSE.uhrzeit(e.wann);
@@ -69,7 +69,8 @@ const VERLAUF = {
         produkt.textContent = e.produktName || "Produkt";
         const wer = document.createElement("small");
         const zustand = VERLAUF._zustandText(e);
-        wer.textContent = (e.wer === uid ? "Du" : (e.werName || "Ehemals")) + (e.menge > 1 ? " · " + e.menge : "")
+        /* Seit 0.9.0 zählt der Kauf für `fuer` (zugewiesen); werName ist schon dessen Name. */
+        wer.textContent = (KASSE.kaeufer(e) === uid ? "Du" : (e.werName || "Ehemals")) + (e.menge > 1 ? " · " + e.menge : "")
             + (zustand ? " · " + zustand : "");
         text.appendChild(produkt);
         text.appendChild(wer);
