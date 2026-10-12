@@ -52,6 +52,14 @@ const START = {
         const inhalt = document.createElement("div");
         inhalt.className = "start-inhalt";
         ort.appendChild(inhalt);
+        /* Hinweis „Als App nutzen“ (0.10.0, Baustein upcrew-homescreen): nur am Handy, nur solange
+           nicht installiert, das Kreuz blendet ihn für immer aus. */
+        if (typeof UPCREW_HOMESCREEN !== "undefined") {
+            const hinweis = UPCREW_HOMESCREEN.hinweis({ app: KONFIG.APP_NAME, oeffnen: () => EINSTELLUNGEN.homescreenOeffnen() });
+            if (hinweis) {
+                inhalt.appendChild(hinweis);
+            }
+        }
         START._inhalt(inhalt);
 
         if (!START.loesen) {
@@ -168,10 +176,8 @@ const START = {
         text.appendChild(titel);
         const lage = document.createElement("span");
         lage.className = "bk-lage" + (l.leer ? " bestand-leer" : "");
-        lage.textContent = l.leer ? "Leer" : [
-            p.offen.length ? p.offen.length + " offen" : "",
-            p.vorrat ? p.vorrat + " im Schrank" : ""
-        ].filter(Boolean).join(" · ");
+        /* Seit 0.10.0 ohne „n im Schrank“ — das steht in der Zeile „Im Schrank“ darunter. */
+        lage.textContent = l.leer ? "Leer" : (p.offen.length ? p.offen.length + " offen" : "Nichts offen");
         text.appendChild(lage);
         if (l.tipp && (l.tipp.art === "kaufen" || l.tipp.art === "mhd")) {
             const tipp = document.createElement("span");
@@ -189,7 +195,10 @@ const START = {
         for (const e of p.offen) {
             liste.appendChild(START._zeileOffen(e, jetzt));
         }
-        const zuViele = p.offen.length + p.zu.length > START.ZEILEN_MAX && p.zu.length > 0;
+        /* Seit 0.10.0 (Nutzer 12.10.2026: „noch zu viele Infos … nur das Wichtigste vorn“): die
+           verschlossenen Packungen stehen IMMER hinter „Im Schrank“ (bis 0.9.0 erst ab vier Zeilen);
+           vorn bleiben die offenen. */
+        const zuViele = p.zu.length > 0;
         const offenZu = !zuViele || START.aufgeklappt[produkt.id];
         if (zuViele) {
             liste.appendChild(START._schrankKnopf(produkt.id, p, jetzt, offenZu));
@@ -301,8 +310,9 @@ const START = {
     },
 
     _zeileOffen(e, jetzt) {
+        /* „geöffnet am“ steht seit 0.10.0 nur noch in der Packung (Tipp auf die Zeile). */
         const oben = e.bis ? "bis " + START._tag(e.bis, jetzt) : "offen";
-        const unten = "geöffnet " + START._tag(e.geoeffnetAm, jetzt) + (e.bis ? " · " + BESTAND.restText(e.restTage) : "");
+        const unten = e.bis ? BESTAND.restText(e.restTage) : "seit " + START._tag(e.geoeffnetAm, jetzt);
         const z = START._zeile("bk-offen" + (e.restTage !== null && e.restTage <= 0 ? " bk-drueber" : e.restTage !== null && e.restTage <= 1 ? " bk-knapp" : ""),
             "Offen", oben, unten, "Leer",
             () => STEUERUNG.packungAendern(e.id, { leerAm: STEUERUNG.jetzt() }), e.id,

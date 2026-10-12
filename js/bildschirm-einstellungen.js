@@ -73,6 +73,12 @@ const EINSTELLUNGEN = {
                 { zeichen: "farbe", titel: "Anpassen", rechts: "pfeil", beiKlick: () => EINSTELLUNGEN.anpassenOeffnen() }
             ]
         };
+        /* „Als App nutzen“ (0.10.0, Baustein upcrew-homescreen): nur, wenn der Baustein da ist und
+           die App NICHT schon vom Home-Bildschirm läuft. */
+        if (typeof UPCREW_HOMESCREEN !== "undefined" && !UPCREW_HOMESCREEN.installiert()) {
+            aussehen.zeilen.push({ zeichen: "info", titel: "Als App nutzen", unter: "Auf den Home-Bildschirm", rechts: "pfeil",
+                beiKlick: () => EINSTELLUNGEN.homescreenOeffnen() });
+        }
 
         /* Abschnitt „Nur in Kaffekasse": die Kasse — Name, Code, wechseln, verlassen. */
         const abschnitte = [konto, aussehen];
@@ -174,6 +180,24 @@ const EINSTELLUNGEN = {
         }
         NAVIGATION.alleVeralten();
         EINSTELLUNGEN.auffrischen();
+    },
+
+    /* Die Anleitung „Auf den Home-Bildschirm“ (Baustein upcrew-homescreen) als Blatt. */
+    homescreenOeffnen() {
+        if (typeof UPCREW_BLATT === "undefined" || typeof UPCREW_HOMESCREEN === "undefined") {
+            return;
+        }
+        let griff = null;
+        UPCREW_BLATT.oeffnen({
+            titel: "Als App nutzen",
+            klasse: "blatt-homescreen",
+            inhalt: (el) => { griff = UPCREW_HOMESCREEN.anleitung(el, { app: KONFIG.APP_NAME, icon: "bilder/icon-192.png" }); },
+            beimSchliessen: () => {
+                if (griff) {
+                    griff.entfernen();
+                }
+            }
+        });
     },
 
     anpassenOeffnen() {

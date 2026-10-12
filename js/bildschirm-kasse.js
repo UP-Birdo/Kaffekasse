@@ -117,21 +117,45 @@ const KASSE_BLATT = {
             art: "karte",
             titel: stand.name,
             inhalt: (el) => {
+                /* Seit 0.10.0 wie der Einladen-Block in Blunderluck: Code groß, „Teilen“ (Link,
+                   der direkt in die Kasse führt) und „Kopieren“; „Mitglieder“ ist ein Knopf. */
+                const einladen = document.createElement("div");
+                einladen.className = "kasse-einladen";
+                const hinweis = document.createElement("div");
+                hinweis.className = "code-unter";
+                hinweis.textContent = stand.name + " · Code teilen";
+                einladen.appendChild(hinweis);
                 const gross = document.createElement("div");
                 gross.className = "code-gross";
                 gross.textContent = stand.code;
                 gross.setAttribute("aria-label", "Code " + stand.code.split("").join(" "));
-                el.appendChild(gross);
-                const unter = document.createElement("p");
-                unter.className = "code-unter";
+                einladen.appendChild(gross);
+                const meldung = document.createElement("div");
+                meldung.className = "feld-hinweis kasse-einladen-meldung";
+                meldung.setAttribute("role", "status");
+                const reihe = document.createElement("div");
+                reihe.className = "kasse-einladen-knoepfe";
+                if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+                    reihe.appendChild(DIALOG.knopf("Teilen", "haupt", () => KASSE_BLATT.teilen(stand)));
+                }
+                reihe.appendChild(DIALOG.knopf("Kopieren", "still", async () => {
+                    meldung.textContent = await KASSE_BLATT.kopieren(stand);
+                }));
+                einladen.appendChild(reihe);
+                einladen.appendChild(meldung);
+                el.appendChild(einladen);
+
                 const anzahl = Object.keys(stand.mitglieder).length;
-                unter.textContent = "Code · " + anzahl + (anzahl === 1 ? " Mitglied" : " Mitglieder");
-                el.appendChild(unter);
-                const wechseln = DIALOG.knopf(STEUERUNG.meine.length > 1 ? "Meine Kassen" : "Wechseln", "still", () => {
-                    UPCREW_BLATT.schliessen();
-                    KASSE_BLATT.kasse();
-                });
-                el.appendChild(KASSE_BLATT._knoepfe(DIALOG.knopf("Ok", "haupt", () => UPCREW_BLATT.schliessen()), wechseln));
+                const menue = document.createElement("div");
+                menue.className = "menue";
+                menue.appendChild(PRODUKTE.menueZeile("Mitglieder", anzahl + (anzahl === 1 ? " Mitglied" : " Mitglieder"),
+                    () => { UPCREW_BLATT.schliessen(); KASSE_BLATT.mitglieder(); }));
+                menue.appendChild(PRODUKTE.menueZeile(STEUERUNG.meine.length > 1 ? "Meine Kassen" : "Andere Kasse",
+                    STEUERUNG.meine.length > 1 ? STEUERUNG.meine.length + " Kassen" : "Anlegen · Beitreten", () => {
+                        UPCREW_BLATT.schliessen();
+                        KASSE_BLATT.kasse();
+                    }));
+                el.appendChild(menue);
             }
         });
     },
@@ -369,25 +393,104 @@ const KASSE_BLATT = {
         return h;
     },
 
-    /* Den Beitrittscode groß zeigen — zum Vorlesen oder Abschreiben. */
+    /* Nach dem Anlegen: dieselbe Karte wie ein Tipp auf die Kasse (Code, Teilen, Mitglieder). */
     code() {
+        KASSE_BLATT.kasseKarte();
+    },
+
+    /* ---------------------------------------------------------------- *
+     * Einladen (0.10.0, Nutzer 12.10.2026: „ein Teilen-Knopf, wo du den Link teilst — genau so
+     * wie bei Blunderluck oder Typoluck … man kommt beim Draufklicken direkt in die Kasse“).
+     * Wie Blunderluck (team-schach.js, Einladen-Block): Text und Link GETRENNT ans Teilen-Menü
+     * (dann holt WhatsApp die Vorschau aus og:image), der Code hängt als `?code=` an der Adresse;
+     * APP liest ihn beim Start (KASSE_BLATT.codeAusAdresse) und tritt nach der Anmeldung bei.
+     * ---------------------------------------------------------------- */
+
+    einladungsAdresse(adresse, code) {
+        return String(adresse) + "?code=" + String(code);
+    },
+
+    /* Der Code aus einer Adresse (`?code=` oder `&code=`) — oder "" (gleich geprüft wie das Feld). */
+    codeAusAdresse(adresse) {
+        const treffer = String(adresse || "").match(/[?&]code=([^&#]*)/);
+        if (!treffer) {
+            return "";
+        }
+        try {
+            return KASSE.codePruefen(decodeURIComponent(treffer[1]));
+        } catch (fehler) {
+            return "";
+        }
+    },
+
+    einladungsTeile(stand) {
+        const adresse = (typeof window !== "undefined" && window.location)
+            ? String(window.location.href).split("#")[0].split("?")[0] : "";
+        return {
+            text: "Komm in meine Kaffekasse „" + stand.name + "“ — Code " + stand.code,
+            url: adresse ? KASSE_BLATT.einladungsAdresse(adresse, stand.code) : ""
+        };
+    },
+
+    teilen(stand) {
+        if (typeof navigator === "undefined" || typeof navigator.share !== "function") {
+            return KASSE_BLATT.kopieren(stand);
+        }
+        const teile = KASSE_BLATT.einladungsTeile(stand);
+        const mitLink = { title: "Kaffekasse", text: teile.text, url: teile.url };
+        const daten = (teile.url && (typeof navigator.canShare !== "function" || navigator.canShare(mitLink)))
+            ? mitLink : { text: teile.text + (teile.url ? ": " + teile.url : "") };
+        return navigator.share(daten).then(() => "", () => "");
+    },
+
+    /* → Promise<"Kopiert" | "Code: …"> für die kleine Zeile unter den Knöpfen. */
+    kopieren(stand) {
+        const teile = KASSE_BLATT.einladungsTeile(stand);
+        const text = teile.text + (teile.url ? ": " + teile.url : "");
+        if (typeof navigator !== "undefined" && navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+            return navigator.clipboard.writeText(text).then(() => "Link kopiert", () => "Code: " + stand.code);
+        }
+        return Promise.resolve("Code: " + stand.code);
+    },
+
+    /* Die Mitglieder der Kasse: Name, seit wann, wer sie angelegt hat. */
+    mitglieder() {
         const stand = STEUERUNG.stand;
         if (!stand || typeof UPCREW_BLATT === "undefined") {
             return;
         }
+        const uid = (typeof KONTO !== "undefined") ? KONTO.uid() : null;
+        const jetzt = STEUERUNG.jetzt();
+        const liste = Object.keys(stand.mitglieder)
+            .map((id) => Object.assign({ id: id }, stand.mitglieder[id]))
+            .sort((a, b) => a.seit - b.seit || a.name.localeCompare(b.name, "de", { sensitivity: "base" }));
         UPCREW_BLATT.oeffnen({
-            art: "karte",
-            titel: stand.name,
+            titel: "Mitglieder · " + liste.length,
+            klasse: "blatt-mitglieder",
             inhalt: (el) => {
-                const gross = document.createElement("div");
-                gross.className = "code-gross";
-                gross.textContent = stand.code;
-                el.appendChild(gross);
-                const unter = document.createElement("p");
-                unter.className = "code-unter";
-                unter.textContent = "Code zum Beitreten";
-                el.appendChild(unter);
-                el.appendChild(KASSE_BLATT._knoepfe(DIALOG.knopf("Ok", "haupt", () => UPCREW_BLATT.schliessen())));
+                const gruppe = document.createElement("div");
+                gruppe.className = "mitglieder-liste";
+                for (const m of liste) {
+                    const zeile = document.createElement("div");
+                    zeile.className = "mitglied-zeile" + (m.id === uid ? " mitglied-ich" : "");
+                    const kreis = document.createElement("span");
+                    kreis.className = "mitglied-kreis";
+                    kreis.textContent = (m.name || "?").charAt(0).toUpperCase();
+                    kreis.setAttribute("aria-hidden", "true");
+                    const text = document.createElement("span");
+                    text.className = "mitglied-text";
+                    const b = document.createElement("b");
+                    b.textContent = m.id === uid ? m.name + " (du)" : m.name;
+                    const s = document.createElement("small");
+                    s.textContent = (m.id === stand.erstelltVon ? "Angelegt · " : "Seit ") + KASSE.datumKurz(m.seit, jetzt);
+                    text.appendChild(b);
+                    text.appendChild(s);
+                    zeile.appendChild(kreis);
+                    zeile.appendChild(text);
+                    gruppe.appendChild(zeile);
+                }
+                el.appendChild(gruppe);
+                el.appendChild(KASSE_BLATT._knoepfe(DIALOG.knopf("Einladen", "haupt", () => KASSE_BLATT.teilen(stand))));
             }
         });
     },
@@ -421,9 +524,15 @@ const KASSE_BLATT = {
                 reihe.appendChild(suchenKnopf);
                 abschnitt.appendChild(reihe);
 
-                const vorschau = document.createElement("div");
+                const vorschau = document.createElement("button");
+                vorschau.type = "button";
                 vorschau.className = "vorschau-produkt";
                 vorschau.hidden = true;
+                vorschau.addEventListener("click", () => {
+                    if (vorschau.treffer && typeof PRODUKTE !== "undefined") {
+                        PRODUKTE.details(vorschau.treffer);
+                    }
+                });
                 abschnitt.appendChild(vorschau);
 
                 const name = KASSE_BLATT._feld("produkt-name", "Name", "Milch", "text", KASSE.NAME_MAX);
@@ -528,8 +637,11 @@ const KASSE_BLATT = {
         }
     },
 
+    /* Die Vorschau des Treffers ist seit 0.10.0 ein Knopf → die Produktdetails (Nährwerte, großes
+       Bild) VOR dem Anlegen (Nutzer 12.10.2026: „auf die Vorschau klicken, um die Details zu sehen“). */
     _vorschauFuellen(vorschau, e) {
         vorschau.textContent = "";
+        vorschau.treffer = e;
         if (e.bild) {
             const img = document.createElement("img");
             img.src = e.bild;
@@ -537,14 +649,17 @@ const KASSE_BLATT = {
             img.referrerPolicy = "no-referrer";
             vorschau.appendChild(img);
         }
-        const text = document.createElement("div");
+        const text = document.createElement("span");
+        text.className = "vorschau-text";
         const name = document.createElement("b");
         name.textContent = e.name;
         const marke = document.createElement("small");
-        marke.textContent = e.marke || "";
+        marke.textContent = [e.marke, "Details"].filter(Boolean).join(" · ");
         text.appendChild(name);
         text.appendChild(marke);
         vorschau.appendChild(text);
+        vorschau.appendChild(ZUSTAND.zeichen("pfeil", "produkt-pfeil"));
+        vorschau.setAttribute("aria-label", e.name + " · Details");
         vorschau.hidden = false;
     },
 

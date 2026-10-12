@@ -20,8 +20,45 @@ const APP = {
     zustand: "wartet",      /* Speicher-Lampe: "gespeichert" | "wartet" | "offline" */
     bereit: false,          /* true, sobald die App (nicht die Anmeldung) zu sehen ist */
 
+    /* Ein Einladungslink (`?code=ABC234`, 0.10.0): gelesen beim Start, danach aus der Adresse
+       genommen (sonst holte jedes Neuladen die Einladung wieder hervor); eingelöst nach der
+       Anmeldung in appZeigen. */
+    einladung: "",
+
+    einladungLesen() {
+        const code = KASSE_BLATT.codeAusAdresse(location.href);
+        if (!code) {
+            return;
+        }
+        APP.einladung = code;
+        try {
+            const adresse = new URL(location.href);
+            adresse.searchParams.delete("code");
+            history.replaceState(history.state, "", adresse.pathname + adresse.search + adresse.hash);
+        } catch (fehler) {
+            /* in einem Vorschau-Rahmen darf das scheitern — die Einladung gilt trotzdem */
+        }
+    },
+
+    async einladungEinloesen() {
+        const code = APP.einladung;
+        APP.einladung = "";
+        if (!code) {
+            return false;
+        }
+        const e = await STEUERUNG.beitreten(code);
+        NAVIGATION.wechseln("start");
+        if (!e.ok) {
+            await DIALOG.hinweis({ titel: "Einladung", text: e.text || "Abgelehnt" });
+        } else if (!e.schonDrin && STEUERUNG.stand) {
+            await DIALOG.hinweis({ titel: STEUERUNG.stand.name, text: "Beigetreten" });
+        }
+        return true;
+    },
+
     starten() {
         window.KAFFEKASSE_GESTARTET = true;
+        APP.einladungLesen();
 
         KONTO.einrichten(KONFIG);
         KONTO.beiVerloren = () => APP.sitzungVerloren();
@@ -41,6 +78,10 @@ const APP = {
 
         if (typeof UPCREW_OFFLINE !== "undefined") {
             UPCREW_OFFLINE.lauschen();
+        }
+        /* Android/Chrome: das Installieren-Angebot früh abfangen (Baustein upcrew-homescreen, 0.10.0). */
+        if (typeof UPCREW_HOMESCREEN !== "undefined") {
+            UPCREW_HOMESCREEN.lauschen();
         }
 
         APP.dienstAnmelden();
@@ -84,7 +125,8 @@ const APP = {
         NAVIGATION.wechseln("start");
         NAVIGATION.auffrischen();
         /* Seit 0.9.0 zuerst die eigenen Kassen am Konto: auf neuem Gerät kein Code mehr nötig. */
-        APP.kontenLaden().then(() => STEUERUNG.nachsenden()).then(() => STEUERUNG.kassenAbgleichen()).then(() => STEUERUNG.laden());
+        APP.kontenLaden().then(() => STEUERUNG.nachsenden()).then(() => STEUERUNG.kassenAbgleichen())
+            .then(() => APP.einladungEinloesen()).then((eingeloest) => (eingeloest ? null : STEUERUNG.laden()));
     },
 
     /* Die Werkstatt (nur localhost, `?werkstatt`): lädt js\werkstatt.js nach — Attrappe der

@@ -1018,9 +1018,15 @@ button {
     display: flex;
     align-items: center;
     gap: 12px;
+    width: 100%;
     padding: 10px 12px;
+    font: inherit;
+    text-align: left;
+    color: var(--schrift);
     background: var(--karte-leise);
+    border: 0;
     border-radius: var(--rund-klein);
+    cursor: pointer;
 }
 
 /* Ohne Treffer versteckt — `display: flex` oben schlüge sonst das hidden-Attribut (0.7.2:
@@ -1037,7 +1043,8 @@ button {
     border-radius: var(--rund-klein);
 }
 
-.vorschau-produkt div {
+.vorschau-produkt .vorschau-text {
+    flex: 1 1 auto;
     display: grid;
     gap: 2px;
     min-width: 0;
@@ -1487,4 +1494,157 @@ button {
     stroke-width: 2.2;
     stroke-linecap: round;
     stroke-linejoin: round;
+}
+
+/* ---------- Aufgeräumte Blätter (0.10.0): Untermenü-Zeilen, Nährwert-Kopf, Details-Bild ---------- */
+
+.menue {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px 2px 4px;
+}
+
+.menue-zeile {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-height: 52px;
+    padding: 10px 12px;
+    font: inherit;
+    text-align: left;
+    color: var(--schrift);
+    background: var(--karte);
+    border: 0;
+    border-radius: var(--rund-mittel);
+    box-shadow: 0 3px 0 var(--still-kante);
+    cursor: pointer;
+}
+
+.menue-zeile-text {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+
+.menue-zeile-text b {
+    overflow-wrap: anywhere;
+}
+
+.menue-zeile-text small {
+    font-size: .76rem;
+    font-weight: 700;
+    color: var(--schrift-leise);
+    overflow-wrap: anywhere;
+}
+
+.naehr-kopf {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.naehr-kopf .blatt-abschnitt-titel {
+    margin: 0;
+}
+
+.details-bild {
+    display: grid;
+    place-items: center;
+    padding: 10px;
+    background: #ffffff;
+    border-radius: var(--rund-mittel);
+}
+
+.details-bild[hidden] {
+    display: none;
+}
+
+.details-bild img {
+    display: block;
+    max-width: 100%;
+    max-height: 200px;
+    object-fit: contain;
+}
+
+/* ---------- Einladen und Mitglieder (0.10.0, wie der Einladen-Block in Blunderluck) ---------- */
+
+.kasse-einladen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0 6px;
+}
+
+.kasse-einladen .code-unter {
+    margin: 0;
+}
+
+.kasse-einladen .code-gross {
+    font-size: 1.9rem;
+    letter-spacing: .28em;
+    padding: 0;
+}
+
+.kasse-einladen-knoepfe {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+}
+
+.kasse-einladen-meldung:empty {
+    display: none;
+}
+
+.mitglieder-liste {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 4px 0 14px;
+}
+
+.mitglied-zeile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 10px;
+    background: var(--karte);
+    border-radius: var(--rund-mittel);
+}
+
+.mitglied-ich {
+    outline: 2px solid var(--haupt);
+}
+
+.mitglied-kreis {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    flex: none;
+    font-weight: 700;
+    color: var(--schrift-leise);
+    background: var(--karte-leise);
+    border-radius: var(--rund-voll);
+}
+
+.mitglied-text {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+
+.mitglied-text b {
+    overflow-wrap: anywhere;
+}
+
+.mitglied-text small {
+    font-size: .76rem;
+    font-weight: 700;
+    color: var(--schrift-leise);
 }

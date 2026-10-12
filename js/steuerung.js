@@ -381,6 +381,15 @@ const STEUERUNG = {
         if (!kasseId) {
             return { ok: false, feld: "code", text: "Code unbekannt" };
         }
+        /* Schon Mitglied (eigene Liste oder gerade gewählt, z. B. über einen Einladungslink zur
+           eigenen Kasse, 0.10.0): nur wechseln — ein neuer Beitritt setzte „seit“ zurück. */
+        if (kasseId === STEUERUNG.kasseId) {
+            await STEUERUNG.laden();
+            return { ok: STEUERUNG.zustand !== "fehler", text: STEUERUNG.technik, schonDrin: true };
+        }
+        if (STEUERUNG.meine.some((k) => k.id === kasseId)) {
+            return Object.assign({ schonDrin: true }, await STEUERUNG.wechseln(kasseId));
+        }
         const beitritt = KASSE.beitreten(null, uid, STEUERUNG._mitgliedName(), STEUERUNG.jetzt());
         try {
             await speicher.aendern(kasseId, beitritt.aenderungen);

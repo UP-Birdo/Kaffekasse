@@ -163,7 +163,7 @@ const PRODUKTSUCHE = {
      * Nummer geht hinaus, Zeitlimit wie die Suche.
      * ---------------------------------------------------------------- */
 
-    NAEHR_FELDER: "nutriments,nutriscore_grade,nova_group,quantity",
+    NAEHR_FELDER: "nutriments,nutriscore_grade,nova_group,quantity,product_quantity,product_quantity_unit,image_front_url",
     /* Reihenfolge und Beschriftung wie auf der Packung (je 100 g / 100 ml). */
     NAEHR_LISTE: [
         { schluessel: "energy-kcal_100g", titel: "Energie", einheit: "kcal", stellen: 0 },
@@ -178,11 +178,14 @@ const PRODUKTSUCHE = {
     ],
     _naehrMerker: {},
 
-    /* Aus der Antwort → { gefunden, menge, nutri ("A"…"E" | ""), nova (1…4 | 0), werte: [{ titel, text }] }. */
+    /* Aus der Antwort → { gefunden, menge, nutri ("A"…"E" | ""), nova (1…4 | 0), packung (g/ml | 0),
+       einheit ("g" | "ml"), bildGross, werte: [{ titel, wert, einheit, stellen, text }] }.
+       Seit 0.10.0 tragen die Werte die ZAHL je 100 g (`wert`), damit der Schalter „je Packung“
+       umrechnen kann (naehrText); `text` ist weiter der Wert je 100 g als Text. */
     naehrwerteZuordnen(antwort) {
         const a = (antwort && typeof antwort === "object") ? antwort : {};
         const p = (a.product && typeof a.product === "object") ? a.product : null;
-        const leer = { gefunden: false, menge: "", nutri: "", nova: 0, werte: [] };
+        const leer = { gefunden: false, menge: "", nutri: "", nova: 0, packung: 0, einheit: "g", bildGross: "", werte: [] };
         if (!p || Number(a.status) === 0 || a.status === "failure") {
             return leer;
         }
@@ -193,18 +196,42 @@ const PRODUKTSUCHE = {
             if (n[f.schluessel] === undefined || n[f.schluessel] === null || n[f.schluessel] === "" || !Number.isFinite(z) || z < 0 || z > 10000) {
                 continue;
             }
-            const text = (f.stellen ? z.toFixed(f.stellen).replace(/\.?0+$/, "") : String(Math.round(z))).replace(".", ",");
-            werte.push({ titel: f.titel, text: text + " " + f.einheit });
+            const w = { titel: f.titel, wert: z, einheit: f.einheit, stellen: f.stellen };
+            w.text = PRODUKTSUCHE.naehrText(w, 1);
+            werte.push(w);
         }
         const nutri = String(p.nutriscore_grade || "").trim().toUpperCase();
         const nova = Number(p.nova_group);
+        /* Packungsinhalt in g oder ml (Open Food Facts führt ihn schon umgerechnet; ohne Einheit = g). */
+        const inhalt = Number(p.product_quantity);
+        const einheit = String(p.product_quantity_unit || "g").trim().toLowerCase();
+        const packung = (Number.isFinite(inhalt) && inhalt > 0 && inhalt <= 100000 && (einheit === "g" || einheit === "ml")) ? inhalt : 0;
+        let bildGross = PRODUKTSUCHE._text(p.image_front_url, 400);
+        if (!/^https:\/\//.test(bildGross)) {
+            bildGross = "";
+        }
         return {
             gefunden: werte.length > 0 || /^[A-E]$/.test(nutri) || (nova >= 1 && nova <= 4),
             menge: PRODUKTSUCHE._text(p.quantity, 30),
             nutri: /^[A-E]$/.test(nutri) ? nutri : "",
             nova: (Number.isInteger(nova) && nova >= 1 && nova <= 4) ? nova : 0,
+            packung: packung,
+            einheit: packung ? einheit : "g",
+            bildGross: bildGross,
             werte: werte
         };
+    },
+
+    /* Ein Nährwert als Text, mit `faktor` umgerechnet (1 = je 100 g; Packung/100 = je Packung).
+       Große Zahlen (ab 100) ohne Nachkommastelle. */
+    naehrText(w, faktor) {
+        const z = Number(w && w.wert) * (Number(faktor) > 0 ? Number(faktor) : 1);
+        if (!Number.isFinite(z)) {
+            return "–";
+        }
+        const stellen = (z >= 100) ? 0 : (w.stellen || 0);
+        const text = (stellen ? z.toFixed(stellen).replace(/\.?0+$/, "") : String(Math.round(z))).replace(".", ",");
+        return text + " " + w.einheit;
     },
 
     /* Wirft nie: jeder Fehler heißt „keine Nährwerte“ (ok: false; netz: true ohne Netz). */

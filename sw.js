@@ -10,7 +10,7 @@
  * Anmeldung (googleapis) gehen nie durch den Zwischenspeicher.
  */
 
-const SPEICHER_NAME = "kaffekasse-v0.9.0";
+const SPEICHER_NAME = "kaffekasse-v0.10.0";
 
 const BEIM_BAUEN = (self.location.hostname === "localhost" || self.location.hostname === "127.0.0.1");
 

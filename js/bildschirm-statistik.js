@@ -54,22 +54,63 @@ const STATISTIK = {
             ort.appendChild(huelle);
         }
 
+        /* Seit 0.10.0 vorn nur drei Kacheln, Personen und Produkte; die übrigen Zahlen und der
+           Verlauf liegen hinter „Mehr Zahlen“ und „Verlauf“ (Nutzer 12.10.2026: „nur das
+           Wichtigste in den Vordergrund, den Rest in Untermenüs“). */
         const st = KASSE.statistik(stand, zeitraum);
         const g = st.gesamt;
         ort.appendChild(STATISTIK.kacheln([
             { titel: "Packungen", wert: String(g.packungen) },
             { titel: "Ausgaben", wert: g.mitPreis > 0 ? KASSE.euro(g.ausgaben) : "–" },
-            { titel: "Ø Preis", wert: KASSE.euro(g.schnittPreis) },
-            { titel: "Je Woche", wert: g.jeWoche === null ? "–" : String(g.jeWoche).replace(".", ",") },
-            { titel: "Ø Lager", wert: KASSE.dauerText(g.lagerMs) },
-            { titel: "Ø Verbrauch", wert: KASSE.dauerText(g.verbrauchMs) }
+            { titel: "Je Woche", wert: g.jeWoche === null ? "–" : String(g.jeWoche).replace(".", ",") }
         ]));
 
         STATISTIK._personen(ort, st.personen);
         STATISTIK._produkte(ort, stand, st, zeitraum, jetzt);
 
-        STATISTIK._zwischentitel(ort, "Verlauf");
-        VERLAUF.liste(ort, stand, zeitraum);
+        const menue = document.createElement("div");
+        menue.className = "menue statistik-menue";
+        menue.appendChild(PRODUKTE.menueZeile("Mehr Zahlen", "Ø Preis · Lager · Verbrauch", () => STATISTIK._mehrBlatt()));
+        menue.appendChild(PRODUKTE.menueZeile("Verlauf", "Alle Einträge nach Tagen", () => STATISTIK._verlaufBlatt()));
+        ort.appendChild(menue);
+    },
+
+    _titelZeitraum() {
+        return STATISTIK.art === "30" ? "30 Tage" : "Alles";
+    },
+
+    _mehrBlatt() {
+        const S = STEUERUNG;
+        if (!S.stand || typeof UPCREW_BLATT === "undefined") {
+            return;
+        }
+        const g = KASSE.statistik(S.stand, KASSE.zeitraum(S.jetzt(), STATISTIK.art)).gesamt;
+        UPCREW_BLATT.oeffnen({
+            titel: "Zahlen · " + STATISTIK._titelZeitraum(),
+            klasse: "blatt-zahlen",
+            inhalt: (el) => {
+                el.appendChild(STATISTIK.kacheln([
+                    { titel: "Packungen", wert: String(g.packungen) },
+                    { titel: "Ausgaben", wert: g.mitPreis > 0 ? KASSE.euro(g.ausgaben) : "–" },
+                    { titel: "Ø Preis", wert: KASSE.euro(g.schnittPreis) },
+                    { titel: "Je Woche", wert: g.jeWoche === null ? "–" : String(g.jeWoche).replace(".", ",") },
+                    { titel: "Ø Lager", wert: KASSE.dauerText(g.lagerMs) },
+                    { titel: "Ø Verbrauch", wert: KASSE.dauerText(g.verbrauchMs) }
+                ]));
+            }
+        });
+    },
+
+    _verlaufBlatt() {
+        const S = STEUERUNG;
+        if (!S.stand || typeof UPCREW_BLATT === "undefined") {
+            return;
+        }
+        UPCREW_BLATT.oeffnen({
+            titel: "Verlauf · " + STATISTIK._titelZeitraum(),
+            klasse: "blatt-verlauf",
+            inhalt: (el) => VERLAUF.liste(el, S.stand, KASSE.zeitraum(S.jetzt(), STATISTIK.art))
+        });
     },
 
     /* Kleine Kacheln: Titel klein, Wert groß. Auch für das Profil und das Produkt-Blatt. */
