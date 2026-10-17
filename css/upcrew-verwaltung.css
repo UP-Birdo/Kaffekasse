@@ -1,0 +1,51 @@
+/* upcrew-verwaltung.css — Verwaltung der UPCrew-Konten (gehört zu js/upcrew-verwaltung.js). Entstanden 17.10.2026.
+   Farben aus der Farbwelt, Rundungen nur über die Variablen. Nichts verbreitert die Seite: Die Tabelle rollt in
+   ihrem eigenen Behälter; ist der Behälter schmaler als 420 px, steht statt der Tabelle eine Karten-Liste. */
+
+.up-vw { container-type: inline-size; min-width: 0; }
+
+.up-vw-karte { background: var(--karte); border: 1px solid var(--rahmen); border-radius: var(--rund-mittel);
+  padding: 10px 12px; min-width: 0; }
+.up-vw-karte + .up-vw-karte { margin-top: 10px; }
+.up-vw-titel { margin: 0 0 8px; font-size: .9rem; }
+.up-vw-erklaerung { margin: 0 0 8px; font-size: .76rem; line-height: 1.35; color: var(--schrift-leise); overflow-wrap: anywhere; }
+.up-vw-beta-zahl { font-weight: 800; color: var(--schrift); }
+
+/* Tabelle: rollt in sich, nie die Seite. */
+.up-vw-roll { max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
+.up-vw-tabelle { width: 100%; border-collapse: collapse; font-size: .8rem; }
+.up-vw-tabelle th { text-align: left; font-size: .68rem; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--schrift-leise); padding: 6px 8px; border-bottom: 1px solid var(--rahmen); white-space: nowrap; }
+.up-vw-tabelle td { padding: 7px 8px; border-top: 1px solid var(--rahmen); vertical-align: middle; white-space: nowrap; }
+.up-vw-tabelle tbody tr:first-child td { border-top: 0; }
+.up-vw-tabelle td.up-vw-name { font-weight: 800; }
+.up-vw-ich { background: color-mix(in srgb, var(--haupt) 10%, transparent); }
+
+/* Karten-Liste (schmal). */
+.up-vw-karten { display: none; list-style: none; margin: 0; padding: 0; }
+.up-vw-konto { padding: 8px 4px; border-top: 1px solid var(--rahmen); min-width: 0; }
+.up-vw-konto:first-child { border-top: 0; }
+.up-vw-konto-kopf { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
+.up-vw-konto-kopf b { font-size: .9rem; overflow-wrap: anywhere; }
+.up-vw-marke { display: inline-flex; padding: 2px 8px; border-radius: var(--rund-voll); font-size: .68rem; font-weight: 900;
+  background: color-mix(in srgb, var(--haupt) 18%, transparent); color: var(--schrift); }
+.up-vw-werte { margin: 2px 0 0; font-size: .74rem; color: var(--schrift-leise); overflow-wrap: anywhere; }
+
+@container (max-width: 419px) {
+  .up-vw-roll { display: none; }
+  .up-vw-karten { display: block; }
+}
+
+/* Knöpfe der Zeilen: klein, Zwei-Schritt („Sicher?“ in Gefahr-Farbe). */
+.up-vw-knoepfe { display: flex; flex-wrap: wrap; gap: 6px; }
+.up-vw-konto .up-vw-knoepfe { margin-top: 6px; }
+.up-vw-knopf { min-height: 32px; margin: 0; padding: 5px 10px; font: inherit; font-size: .74rem; font-weight: 800;
+  white-space: nowrap; cursor: pointer; color: var(--schrift); background: var(--karte-leise);
+  border: 1px solid var(--rahmen); border-radius: var(--rund-klein); box-shadow: none; }
+.up-vw-knopf:focus-visible { outline: 2px solid var(--haupt); outline-offset: 2px; }
+.up-vw-knopf:disabled { opacity: .55; cursor: default; }
+.up-vw-gefahr { color: var(--gefahr, #d93a2f); }
+.up-vw-scharf { background: var(--gefahr, #d93a2f); border-color: transparent; color: var(--gefahr-schrift, #fff); }
+
+.up-vw-spielerliste { margin-top: 10px; }
+.up-vw-details { min-width: 0; overflow-wrap: anywhere; }

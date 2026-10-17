@@ -2,7 +2,8 @@
  * bildschirm-einstellungen.js — die Einstellungen über den Studio-Baustein
  * (upcrew-einstellungen.js): Abschnitte `konto`, `aussehen`, `spiel` („Nur in Kaffekasse“:
  * Kasse mit Name, Code, wechseln, verlassen), `ueber` (Version, Speicher, Wunsch, Fehler,
- * Quellen). Kein `admin`. Seit 0.6.0 ein BLATT (EINSTELLUNGEN.oeffnen), kein Tab mehr.
+ * Quellen). Seit 0.14.0 kommen `konto`, `admin` (Verwaltung, nur Admins) und `gefahr`
+ * (Konto löschen) aus dem Baustein upcrew-konto.js. Seit 0.6.0 ein BLATT, kein Tab mehr.
  *
  * „Anpassen" ist hier EINE Zeile mit Pfeil, die ein Blatt öffnet (Nutzer-Entscheidung
  * 08.10.2026: Anpassen unter Einstellungen, nicht als Tab). Darin läuft der
@@ -51,21 +52,10 @@ const EINSTELLUNGEN = {
     zeichnen(ort) {
         ort.textContent = "";
         const E = UPCREW_EINSTELLUNGEN;
-        const ich = APP.eigener();
-        const gast = (typeof KONTO !== "undefined") && KONTO.istGastSitzung();
 
-        const konto = {
-            art: "konto",
-            zeilen: [
-                {
-                    zeichen: "person",
-                    titel: ich ? ich.name : (gast ? "Gast" : "Konto"),
-                    tag: (ich && ich.tag) ? "#" + ich.tag : "",
-                    unter: "UPCrew-Konto"
-                },
-                { zeichen: "verlassen", titel: "Abmelden", beiKlick: () => APP.abmelden() }
-            ]
-        };
+        /* Konto, Admin (Verwaltung) und Gefahr (Konto löschen) seit 0.14.0 aus dem Baustein
+           upcrew-konto.js — gleiche Texte und Abläufe wie in jeder UPCrew-App. */
+        const kontoTeile = UPCREW_KONTO.abschnitte();
 
         const aussehen = {
             art: "aussehen",
@@ -81,7 +71,7 @@ const EINSTELLUNGEN = {
         }
 
         /* Abschnitt „Nur in Kaffekasse": die Kasse — Name, Code, wechseln, verlassen. */
-        const abschnitte = [konto, aussehen];
+        const abschnitte = kontoTeile.concat([aussehen]);
         if (STEUERUNG.hatKasse() && STEUERUNG.stand) {
             const stand = STEUERUNG.stand;
             abschnitte.push({

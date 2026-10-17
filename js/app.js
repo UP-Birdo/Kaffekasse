@@ -64,6 +64,7 @@ const APP = {
         KONTO.beiVerloren = () => APP.sitzungVerloren();
         APP.speicher = speicherErzeugen();
         APP.werkstattEinrichten();
+        APP.kontoEinrichten();
         STEUERUNG.einrichten();
 
         NAVIGATION.einrichten({
@@ -127,7 +128,53 @@ const APP = {
         NAVIGATION.auffrischen();
         /* Seit 0.9.0 zuerst die eigenen Kassen am Konto: auf neuem Gerät kein Code mehr nötig. */
         APP.kontenLaden().then(() => STEUERUNG.nachsenden()).then(() => STEUERUNG.kassenAbgleichen())
-            .then(() => APP.einladungEinloesen()).then((eingeloest) => (eingeloest ? null : STEUERUNG.laden()));
+            .then(() => APP.einladungEinloesen()).then((eingeloest) => (eingeloest ? null : STEUERUNG.laden()))
+            .then(() => APP.gastErinnern());
+    },
+
+    /* Das UPCrew-Konto in den Einstellungen und die Verwaltung (seit 0.14.0, Bausteine
+       js\upcrew-konto.js + js\upcrew-verwaltung.js, Einbau: UPCrew bausteine\EINBAU-VERWALTUNG.md).
+       Texte und Abläufe (Name, Nummer, Passwort, Gast sichern, Abmelden, Konto löschen, Verwaltung)
+       stehen im Baustein; hier nur die Haken. Kein `spiel`: die Datenbank-Regel lässt einen Admin
+       keine fremden Kassen lesen, also bleibt „Nur in Kaffekasse“ der Verwaltung leer. Kein
+       `spielerWerte`: Kaffekasse hat keinen Fortschritt (Spielerliste nur aus den Konten). */
+    kontoEinrichten() {
+        if (typeof UPCREW_KONTO === "undefined") {
+            return;
+        }
+        UPCREW_KONTO.einrichten({
+            app: KONFIG.APP_NAME,
+            daten: () => APP.daten,
+            speicher: () => (APP.speicher ? APP.speicher.konten : null),
+            nachladen: () => APP.kontenLaden(),
+            nachAbmelden: async () => APP.nachAbmelden(),
+            nachGastSichern: () => EINSTELLUNGEN.auffrischen(),
+            nachKonto: () => {
+                START.kopfAktualisieren();
+                EINSTELLUNGEN.auffrischen();
+            },
+            nachAenderung: () => EINSTELLUNGEN.auffrischen(),
+            adminErlaubt: () => APP.werkstattAdmin(),
+            verwaltungSichtbar: () => (typeof UPCREW_FREIGABE === "undefined" || UPCREW_FREIGABE.darf("verwaltung"))
+        });
+    },
+
+    /* Werkstatt (nur localhost, `?werkstatt&rolle=admin`): die Zeile „Verwaltung“ auch ohne
+       Admin-Konto zeigen. Geschrieben wird trotzdem nur, was die Datenbank-Regel erlaubt. */
+    werkstattAdmin() {
+        if (typeof location === "undefined") {
+            return false;
+        }
+        const lokal = ["localhost", "127.0.0.1", "[::1]"].indexOf(location.hostname) !== -1;
+        return lokal && /[?&]werkstatt/.test(location.search) && /[?&]rolle=admin(&|$)/.test(location.search);
+    },
+
+    /* Ein Gast wird jedes dritte Öffnen gefragt, ob er sichern will (Baustein). */
+    gastErinnern() {
+        if (typeof UPCREW_KONTO === "undefined" || !APP.bereit) {
+            return false;
+        }
+        return UPCREW_KONTO.gastErinnern();
     },
 
     /* Der Freigabe-Kanal (seit 0.13.0, Baustein js\freigabe.js): die Tabelle melden (konfig.js tut
@@ -158,14 +205,18 @@ const APP = {
         document.body.appendChild(skript);
     },
 
-    /* Die Konten-Liste holen (unter Regel §12: Marke, Rollen, eigener Eintrag, Auszüge). */
+    /* Die Konten-Liste holen (unter Regel §12: Marke, Rollen, eigener Eintrag, Auszüge).
+       Liefert seit 0.14.0 den frischen Stand (APP.daten) — oder null, wenn das Laden scheitert
+       (die Konto-Bausteine schreiben nur auf einem frischen Stand). */
     async kontenLaden() {
         if (!APP.speicher || !KONTO.angemeldet()) {
-            return;
+            return null;
         }
         APP.zustand = "wartet";
+        let frisch = null;
         try {
             APP.daten = await APP.speicher.konten.laden();
+            frisch = APP.daten;
             APP.zustand = "gespeichert";
             if (typeof UPCREW_OFFLINE !== "undefined") {
                 UPCREW_OFFLINE.setzen(false);
@@ -181,6 +232,7 @@ const APP = {
         }
         START.kopfAktualisieren();
         EINSTELLUNGEN.auffrischen();
+        return frisch;
     },
 
     eigener() {
@@ -203,12 +255,14 @@ const APP = {
         return APP.zustand;
     },
 
-    async abmelden() {
-        const ja = await DIALOG.frage({ titel: "Abmelden", text: "UPCrew-Konto abmelden?", ja: "Abmelden" });
-        if (!ja) {
-            return;
-        }
-        KONTO.abmelden();
+    /* Abmelden über den Baustein (seit 0.14.0): fragt immer, warnt einen Gast und räumt dessen
+       Eintrag samt Gast-Konto weg; danach der Haken APP.nachAbmelden. */
+    abmelden() {
+        return UPCREW_KONTO.abmelden();
+    },
+
+    /* Haken `nachAbmelden` (auch nach „Konto löschen“): Person vergessen, Anmeldung zeigen. */
+    nachAbmelden() {
         APP.daten = null;
         STEUERUNG.vergessen();
         if (typeof UPCREW_BLATT !== "undefined") {

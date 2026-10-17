@@ -66,6 +66,10 @@
     <link rel="stylesheet" href="css/upcrew-blatt.css">
     <link rel="stylesheet" href="css/upcrew-einstellungen.css">
     <link rel="stylesheet" href="css/upcrew-offline.css">
+    <!-- Konto und Verwaltung (seit 0.14.0, gleich in allen UPCrew-Apps) -->
+    <link rel="stylesheet" href="css/upcrew-spielerliste.css">
+    <link rel="stylesheet" href="css/upcrew-konto.css">
+    <link rel="stylesheet" href="css/upcrew-verwaltung.css">
     <!-- Profil wie in den Spielen (seit 0.6.0; fehlen die Dateien noch, bleibt der schlichte Kopf) -->
     <link rel="stylesheet" href="css/upcrew-abzeichen.css">
     <link rel="stylesheet" href="css/upcrew-levelpfad.css">
@@ -117,6 +121,11 @@
     <script src="js/konto.js"></script>
     <script src="js/speicher.js"></script>
     <script src="js/speicher-konten.js"></script>
+    <!-- Konto und Verwaltung (seit 0.14.0): NACH konto.js, upcrew-einstellungen.js, upcrew-blatt.js;
+         upcrew-konto.js VOR upcrew-verwaltung.js (EINBAU-VERWALTUNG.md) -->
+    <script src="js/upcrew-spielerliste.js"></script>
+    <script src="js/upcrew-konto.js"></script>
+    <script src="js/upcrew-verwaltung.js"></script>
 
     <!-- Eigene Dateien -->
     <script src="js/dialog.js"></script>

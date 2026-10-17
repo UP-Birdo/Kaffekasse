@@ -1,0 +1,148 @@
+/*
+ * upcrew-spielerliste.css — die Spielerliste für Admins (zu upcrew-spielerliste.js), gleich in Blunderluck und
+ * Typoluck. Entstanden in Typoluck 0.16.3 — gemeinsamer Baustein, KOPIEREN.
+ *
+ * MARKUP (baut upcrew-spielerliste.js):
+ *   <div class="up-sl">
+ *     <div class="up-sl-leiste"><input class="up-sl-suche"><select class="up-sl-sorte"><label class="up-sl-gaeste"></div>
+ *     <p class="up-sl-zahl">12 von 14 Spielern</p>
+ *     <ul class="up-sl-liste"><li><button class="up-sl-zeile">
+ *       <span class="up-sl-kopf"><span class="up-sl-name">Anna</span><span class="up-sl-tag">#1234</span>
+ *         <span class="up-sl-marke up-sl-rolle">Admin</span></span>
+ *       <span class="up-sl-werte">Lv 5 · Serie 3 · 12 Partien · zuletzt 26.09.26</span>
+ *     </button></li> …</ul>
+ *   </div>
+ *   Details: <div class="up-sl-details"><dl class="up-sl-werteliste">…</dl><h3 class="up-sl-spiel">…</h3>…</div>
+ * Karten statt breiter Tabelle — handytauglich ab 320 px. Farben nur aus der Farbwelt.
+ */
+
+.up-sl-leiste {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.up-sl-suche {
+    flex: 1 1 160px;
+    min-width: 0;
+    padding: 8px 10px;
+    font: inherit;
+    color: var(--schrift);
+    background: var(--karte-leise);
+    border: 1px solid var(--rahmen);
+    border-radius: var(--rund-klein, 8px);
+}
+
+.up-sl-sorte {
+    padding: 8px 6px;
+    font: inherit;
+    color: var(--schrift);
+    background: var(--karte-leise);
+    border: 1px solid var(--rahmen);
+    border-radius: var(--rund-klein, 8px);
+}
+
+.up-sl-gaeste {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.85rem;
+    color: var(--schrift-leise);
+}
+
+.up-sl-zahl {
+    margin: 8px 0;
+    font-size: 0.8rem;
+    color: var(--schrift-leise);
+}
+
+.up-sl-liste {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.up-sl-zeile {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    width: 100%;
+    padding: 10px 12px;
+    font: inherit;
+    text-align: left;
+    color: var(--schrift);
+    background: var(--karte);
+    border: 1px solid var(--rahmen);
+    border-radius: var(--rund-mittel, 14px);
+    cursor: pointer;
+}
+
+.up-sl-zeile:focus-visible {
+    outline: 2px solid var(--haupt);
+    outline-offset: 1px;
+}
+
+.up-sl-kopf {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.up-sl-name {
+    font-weight: 700;
+}
+
+.up-sl-tag {
+    font-size: 0.8rem;
+    color: var(--schrift-leise);
+}
+
+.up-sl-marke {
+    padding: 1px 7px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--schrift-leise);
+    background: var(--karte-leise);
+    border-radius: var(--rund-voll, 999px);
+}
+
+.up-sl-rolle {
+    color: var(--haupt);
+}
+
+.up-sl-werte {
+    font-size: 0.78rem;
+    color: var(--schrift-leise);
+    font-variant-numeric: tabular-nums;
+}
+
+.up-sl-werteliste {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 4px 12px;
+    margin: 0 0 10px;
+}
+
+.up-sl-werteliste dt {
+    color: var(--schrift-leise);
+}
+
+.up-sl-werteliste dd {
+    margin: 0;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.up-sl-spiel {
+    margin: 12px 0 6px;
+    font-size: 0.95rem;
+}
+
+.up-sl-leer {
+    color: var(--schrift-leise);
+}

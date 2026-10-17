@@ -13,7 +13,7 @@
 
 const KONFIG = {
 
-    APP_VERSION: "0.13.0",
+    APP_VERSION: "0.14.0",
 
     /*
      * DER FREIGABE-KANAL (seit 0.13.0, Baustein js\freigabe.js, Einbau: UPCrew
@@ -38,7 +38,8 @@ const KONFIG = {
         "rueckgaengig": "alle",        /* 0.12.0 „Rückgängig“ nach „Leer“ und „Öffnen“ */
         "laenger-als-ueblich": "alle", /* 0.12.0 „offen seit n Tagen · länger als üblich“ */
         "ausgaben-monat": "alle",      /* 0.12.0 Ausgaben je Monat in „Mehr Zahlen“ */
-        "scan-hinweise": "alle"        /* 0.11.0 Schon da, Prüfziffer, „Nochmal“ beim Suchen */
+        "scan-hinweise": "alle",       /* 0.11.0 Schon da, Prüfziffer, „Nochmal“ beim Suchen */
+        "verwaltung": "admin"          /* 0.14.0 Verwaltung der Konten (Baustein upcrew-verwaltung), sieht ohnehin nur Admin */
     },
 
     /* Name und Nummer im Studio-Intro (die Reihe der Nummern führt das Studio). */
