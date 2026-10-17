@@ -8,7 +8,8 @@
  *   Produkte   seit 0.9.0 je Produkt nur EINE schlanke Zeile (Bild, Name, Packungen, Dran) —
  *              Tipp → Blatt mit allen Zahlen im Zeitraum (Nutzer 12.10.2026: „nicht so überladen
  *              mit Text, sondern drauf drücken und dahinter Popup mit mehr Fakten“): Packungen,
- *              Ø Preis, offen seit, „leer ~“, dran, Läden, Angebote, Lager, MHD, Balken je Person
+ *              Ø Preis, offen seit, „reicht bis“ (seit 0.11.0 wie im Bestand), dran, Läden,
+ *              Angebote, Lager, haltbar bis, Balken je Person
  *   Verlauf    darunter wie bisher (VERLAUF.liste), jede Zeile → Packungs-Blatt
  * Kurze Beschriftungen, keine Sätze. Alle Zahlen aus dem Modell (KASSE.statistik,
  * KASSE.uebersicht) — der Bildschirm rechnet nichts.
@@ -70,7 +71,7 @@ const STATISTIK = {
 
         const menue = document.createElement("div");
         menue.className = "menue statistik-menue";
-        menue.appendChild(PRODUKTE.menueZeile("Mehr Zahlen", "Ø Preis · Lager · Verbrauch", () => STATISTIK._mehrBlatt()));
+        menue.appendChild(PRODUKTE.menueZeile("Mehr Zahlen", "Ø Preis · Lager · je Monat", () => STATISTIK._mehrBlatt()));
         menue.appendChild(PRODUKTE.menueZeile("Verlauf", "Alle Einträge nach Tagen", () => STATISTIK._verlaufBlatt()));
         ort.appendChild(menue);
     },
@@ -97,6 +98,19 @@ const STATISTIK = {
                     { titel: "Ø Lager", wert: KASSE.dauerText(g.lagerMs) },
                     { titel: "Ø Verbrauch", wert: KASSE.dauerText(g.verbrauchMs) }
                 ]));
+                /* Ausgaben je Monat (0.12.0): die letzten sechs Monate, unabhängig vom Zeitraum
+                   oben; Balken am teuersten Monat. Ohne einen einzigen Preis fehlt der Abschnitt. */
+                const monate = KASSE.ausgabenJeMonat(S.stand, S.jetzt(), 6);
+                if (monate.some((m) => m.mitPreis > 0)) {
+                    STATISTIK._zwischentitel(el, "Ausgaben je Monat");
+                    const karte = document.createElement("div");
+                    karte.className = "uebersicht";
+                    for (const m of monate) {
+                        karte.appendChild(STATISTIK._balkenZeile(m.name, m.anteil,
+                            m.mitPreis > 0 ? KASSE.euro(m.ausgaben) : "–", false));
+                    }
+                    el.appendChild(karte);
+                }
             }
         });
     },
@@ -258,15 +272,16 @@ const STATISTIK = {
             { titel: "Packungen", wert: String(p.packungen) },
             { titel: "Ø Preis", wert: KASSE.euro(p.schnittPreis) },
             { titel: "Offen seit", wert: p.offen ? KASSE.gross(KASSE.datumKurz(p.offen.geoeffnetAm, jetzt)) : "–" },
-            /* Liegt die Schätzung schon hinter uns, ist die Packung länger offen als üblich. */
-            { titel: "Leer ~", wert: !p.prognose ? "–" : p.prognose < jetzt ? "überfällig" : KASSE.gross(KASSE.datumKurz(p.prognose, jetzt)) },
+            /* Seit 0.11.0 „Reicht bis“ wie im Bestand (offen + Vorrat) statt „Leer ~ / überfällig“
+               (nur die offene Packung) — eine Zahl, überall gleich. */
+            { titel: "Reicht bis", wert: BESTAND.reichtKurz(l, jetzt) },
             { titel: "Dran", wert: p.dran ? (p.dran === uid ? "Du" : KASSE.mitgliedName(stand, p.dran)) : "–" },
             { titel: "Je Woche", wert: p.jeWoche === null ? "–" : String(p.jeWoche).replace(".", ",") },
             { titel: "Angebot", wert: l.angebotsquote ? BESTAND.prozent(l.angebotsquote) : "–" },
             { titel: "Ø Ersparnis", wert: l.ersparnis > 0 ? KASSE.euro(l.ersparnis) : "–" },
             { titel: "Nächstes ~", wert: l.naechstesAngebot ? KASSE.gross(KASSE.datumKurz(l.naechstesAngebot.naechstes, jetzt)) : "–" },
             { titel: "Lager max", wert: KASSE.dauerText(l.lagerMaxMs) },
-            { titel: "MHD", wert: (l.naechstesMhd || l.abgelaufen) ? BESTAND.mhdLageText(l, jetzt) : "–" },
+            { titel: "Haltbar bis", wert: (l.naechstesMhd || l.abgelaufen) ? BESTAND.mhdLageText(l, jetzt) : "–" },
             { titel: "Läden", wert: l.laeden.length ? l.laeden.map((x) => x.laden).join(", ") : "–" }
         ]));
     }

@@ -125,6 +125,8 @@ const STEUERUNG = {
         STEUERUNG.zustand = "leer";
         STEUERUNG.technik = "";
         STEUERUNG.merken();
+        /* Die Haken der Einkaufsliste (0.11.0) gehen mit — sie gehören zur Kasse am Konto. */
+        STEUERUNG._schreib(KONFIG.schluessel.einkauf, null);
         STEUERUNG._melden();
     },
 
@@ -390,7 +392,7 @@ const STEUERUNG = {
         if (STEUERUNG.meine.some((k) => k.id === kasseId)) {
             return Object.assign({ schonDrin: true }, await STEUERUNG.wechseln(kasseId));
         }
-        const beitritt = KASSE.beitreten(null, uid, STEUERUNG._mitgliedName(), STEUERUNG.jetzt());
+        const beitritt = KASSE.beitreten(null, uid, STEUERUNG._mitgliedName(), STEUERUNG.jetzt(), KONFIG.beitrittMitCode === true ? code : "");
         try {
             await speicher.aendern(kasseId, beitritt.aenderungen);
         } catch (fehler) {
@@ -486,6 +488,50 @@ const STEUERUNG = {
     async vorbelegungUebernehmen(eintragId, angebot) {
         const felder = BESTAND.felder(STEUERUNG.vorbelegung(eintragId), angebot);
         return STEUERUNG.packungAendern(eintragId, felder);
+    },
+
+    /* ---------------------------------------------------------------- *
+     * Einkaufsliste (0.11.0): Haken nur am Gerät, je Kasse (BESTAND rechnet die Liste)
+     * ---------------------------------------------------------------- */
+
+    _haken() {
+        let alle = null;
+        try {
+            alle = JSON.parse(STEUERUNG._lies(KONFIG.schluessel.einkauf) || "null");
+        } catch (fehler) {
+            alle = null;
+        }
+        return (alle && typeof alle === "object" && !Array.isArray(alle)) ? alle : {};
+    },
+
+    /* → die Liste aus BESTAND.einkaufsliste (leer ohne Kasse). */
+    einkauf() {
+        if (!STEUERUNG.stand || !STEUERUNG.kasseId) {
+            return [];
+        }
+        const haken = STEUERUNG._haken()[STEUERUNG.kasseId] || {};
+        return BESTAND.einkaufsliste(STEUERUNG.stand, STEUERUNG.jetzt(), haken);
+    },
+
+    /* Haken an/aus. Abgelaufene Haken dieser Kasse fallen dabei weg. */
+    abhaken(produktId, an) {
+        if (!STEUERUNG.stand || !STEUERUNG.kasseId || !produktId) {
+            return;
+        }
+        const jetzt = STEUERUNG.jetzt();
+        const alle = STEUERUNG._haken();
+        const eigene = BESTAND.abgehaktAufraeumen(STEUERUNG.stand, alle[STEUERUNG.kasseId], jetzt);
+        if (an) {
+            eigene[produktId] = jetzt;
+        } else {
+            delete eigene[produktId];
+        }
+        if (Object.keys(eigene).length) {
+            alle[STEUERUNG.kasseId] = eigene;
+        } else {
+            delete alle[STEUERUNG.kasseId];
+        }
+        STEUERUNG._schreib(KONFIG.schluessel.einkauf, Object.keys(alle).length ? JSON.stringify(alle) : null);
     },
 
     darfZuruecknehmen(eintrag) {

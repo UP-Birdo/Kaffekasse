@@ -305,8 +305,13 @@ class SpeicherKonten extends SpeicherGemeinsam {
 
     async _ladenP12(start) {
         const uid = this.eigeneUid ? this.eigeneUid() : null;
+        /* OHNE KONTO NUR DIE MARKE (seit 13.10.2026, Sicherheits-Befund B2):
+           `rollen` braucht nur, wer angemeldet ist (Admin-Frage), und die
+           Regel gibt den Knoten künftig nur Angemeldeten — ein Abruf ohne
+           Token liefe dann auf 401 und risse das ganze Laden mit. Mit Konto
+           wie bisher beide zugleich. */
         const [marke, rollen] = await Promise.all([this._teilHolen(SpeicherGemeinsam.MARKEN_FELD),
-            this._teilHolen("rollen")]);
+            uid ? this._teilHolen("rollen") : Promise.resolve(null)]);
         const roh = { rollen: (rollen && typeof rollen === "object") ? rollen : {} };
         if (typeof marke === "number") {
             roh[SpeicherGemeinsam.MARKEN_FELD] = marke;

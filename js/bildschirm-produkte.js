@@ -273,7 +273,7 @@ const PRODUKTE = {
 
                 el.appendChild(STATISTIK.kacheln([
                     { titel: "Im Schrank", wert: l.leer ? "Leer" : String(l.vorrat) },
-                    { titel: "Reicht bis", wert: l.leer ? "–" : (l.reichtBis ? "~" + KASSE.datumKurz(l.reichtBis, jetzt) : "–") },
+                    { titel: "Reicht bis", wert: BESTAND.reichtKurz(l, jetzt) },
                     { titel: "Dran", wert: f.dran ? wer(f.dran) : "–" }
                 ]));
                 if (l.tipp && l.tipp.art !== "reicht") {
@@ -328,7 +328,7 @@ const PRODUKTE = {
                     { titel: "Ø Verbrauch", wert: KASSE.dauerText(f.verbrauchMs) },
                     { titel: "Ø Lager", wert: KASSE.dauerText(f.lagerMs) },
                     { titel: "Lager max", wert: KASSE.dauerText(l.lagerMaxMs) },
-                    { titel: "MHD", wert: BESTAND.mhdLageText(l, jetzt) }
+                    { titel: "Haltbar bis", wert: BESTAND.mhdLageText(l, jetzt) }
                 ]));
                 const letzte = KASSE_BLATT._abschnitt(el, "Letzte Packungen");
                 if (f.letzte.length === 0) {

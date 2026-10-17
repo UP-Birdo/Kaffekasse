@@ -13,7 +13,7 @@
 
 const KONFIG = {
 
-    APP_VERSION: "0.10.0",
+    APP_VERSION: "0.12.0",
 
     /* Name und Nummer im Studio-Intro (die Reihe der Nummern führt das Studio). */
     APP_NAME: "Kaffekasse",
@@ -60,14 +60,24 @@ const KONFIG = {
     /* Wie lange die Leiste „Laden · Angebot · MHD“ nach dem „+“ stehen bleibt (0.7.0). */
     vorbelegungMs: 8000,
 
+    /* Wie lange „Rückgängig“ nach „Leer“ und „Öffnen“ in der Bestand-Karte steht (0.12.0). */
+    rueckgaengigMs: 6000,
+
     /* Schlüssel im Gerätespeicher. Alle UPCrew-Apps liegen auf demselben Ursprung und
        teilen den Browser-Speicher — deshalb der eigene Vorsatz. Das Konto liegt unter
        `kaffekasse.konto` (Baustein), das Aussehen unter dem Schlüssel des Aussehen-Bausteins. */
     schluessel: {
         kasse: "kaffekasse.kasse",
         stand: "kaffekasse.stand",
-        wartend: "kaffekasse.wartend"
+        wartend: "kaffekasse.wartend",
+        /* Haken der Einkaufsliste (0.11.0), nur am Gerät: { kasseId: { produktId: Zeit } }. */
+        einkauf: "kaffekasse.einkauf"
     },
+
+    /* Beitritt mit Code als Beleg (0.11.0, Regel-Vorschlag „Beitritt“): erst auf true, wenn
+       die Regel Schritt 1 (Feld `code` im Mitglieds-Knoten erlaubt) LIVE ist — die heutige Regel
+       lehnt das Feld ab, mit false geht der Beitritt wie bisher. */
+    beitrittMitCode: false,
 
     /* Wie lange der Notfall-Weg in index.html wartet, bis er die Seite selbst anzeigt.
        Das Intro endet spätestens nach rund 9 s (Baustein), also davor. */

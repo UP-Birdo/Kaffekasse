@@ -145,6 +145,8 @@ const KASSE_BLATT = {
                 einladen.appendChild(meldung);
                 el.appendChild(einladen);
 
+                KASSE_BLATT._zuletzt(el, stand);
+
                 const anzahl = Object.keys(stand.mitglieder).length;
                 const menue = document.createElement("div");
                 menue.className = "menue";
@@ -158,6 +160,35 @@ const KASSE_BLATT = {
                 el.appendChild(menue);
             }
         });
+    },
+
+    /* „Zuletzt gekauft“ (0.11.0) in der Kasse-Karte: die drei neuesten Packungen, je Zeile
+       Person · Produkt · Tag. Ohne Käufe fehlt der Abschnitt. */
+    _zuletzt(el, stand) {
+        const liste = KASSE.zuletztGekauft(stand, 3);
+        if (!liste.length) {
+            return;
+        }
+        const uid = (typeof KONTO !== "undefined") ? KONTO.uid() : null;
+        const jetzt = STEUERUNG.jetzt();
+        const abschnitt = KASSE_BLATT._abschnitt(el, "Zuletzt gekauft");
+        const gruppe = document.createElement("div");
+        gruppe.className = "zuletzt-liste";
+        for (const z of liste) {
+            const zeile = document.createElement("div");
+            zeile.className = "zuletzt-zeile" + (z.kaeufer === uid ? " zuletzt-ich" : "");
+            const wer = document.createElement("b");
+            wer.textContent = z.kaeufer === uid ? "Du" : z.name;
+            const was = document.createElement("span");
+            was.textContent = z.produktName;
+            const wann = document.createElement("small");
+            wann.textContent = KASSE.datumKurz(z.kauf, jetzt);
+            zeile.appendChild(wer);
+            zeile.appendChild(was);
+            zeile.appendChild(wann);
+            gruppe.appendChild(zeile);
+        }
+        abschnitt.appendChild(gruppe);
     },
 
     /* Das Packungs-Blatt (Tipp auf „Eben …“, eine Verlauf-Zeile, eine der letzten Packungen):
@@ -237,7 +268,7 @@ const KASSE_BLATT = {
                 angebotZeile.appendChild(angebotText);
                 kaufTeil.appendChild(angebotZeile);
 
-                const mhd = KASSE_BLATT._feld("packung-mhd", "MHD", "", "date", 0);
+                const mhd = KASSE_BLATT._feld("packung-mhd", "Haltbar bis", "", "date", 0);
                 mhd.feld.value = KASSE.alsDatum(e.mhd || (kauf ? vor.mhd : 0));
                 mhd.feld.disabled = !kauf;
                 kaufTeil.appendChild(mhd.zeile);
@@ -461,6 +492,7 @@ const KASSE_BLATT = {
         }
         const uid = (typeof KONTO !== "undefined") ? KONTO.uid() : null;
         const jetzt = STEUERUNG.jetzt();
+        const letzter = KASSE.letzterJeMitglied(stand);
         const liste = Object.keys(stand.mitglieder)
             .map((id) => Object.assign({ id: id }, stand.mitglieder[id]))
             .sort((a, b) => a.seit - b.seit || a.name.localeCompare(b.name, "de", { sensitivity: "base" }));
@@ -482,7 +514,10 @@ const KASSE_BLATT = {
                     const b = document.createElement("b");
                     b.textContent = m.id === uid ? m.name + " (du)" : m.name;
                     const s = document.createElement("small");
-                    s.textContent = (m.id === stand.erstelltVon ? "Angelegt · " : "Seit ") + KASSE.datumKurz(m.seit, jetzt);
+                    /* Seit 0.11.0 dazu der letzte Kauf („wer hat zuletzt gekauft“). */
+                    const l = letzter[m.id];
+                    s.textContent = (m.id === stand.erstelltVon ? "Angelegt · " : "Seit ") + KASSE.datumKurz(m.seit, jetzt)
+                        + (l ? " · zuletzt " + l.produktName + " " + KASSE.datumKurz(l.kauf, jetzt) : " · noch kein Kauf");
                     text.appendChild(b);
                     text.appendChild(s);
                     zeile.appendChild(kreis);
@@ -535,13 +570,37 @@ const KASSE_BLATT = {
                 });
                 abschnitt.appendChild(vorschau);
 
+                /* Rückmeldung nach der Suche (0.11.0): „Schon da“ mit „Gekauft“, „Unbekannt“ als
+                   ruhiger Hinweis (kein Fehler), bei Netz/Dienst ein „Nochmal“. */
+                const meldung = document.createElement("div");
+                meldung.className = "scan-meldung";
+                meldung.setAttribute("role", "status");
+                meldung.hidden = true;
+                abschnitt.appendChild(meldung);
+
                 const name = KASSE_BLATT._feld("produkt-name", "Name", "Milch", "text", KASSE.NAME_MAX);
                 const marke = KASSE_BLATT._feld("produkt-marke", "Marke", "", "text", KASSE.NAME_MAX);
                 abschnitt.appendChild(name.zeile);
                 abschnitt.appendChild(marke.zeile);
 
-                async function suchen() {
+                function melden(text, knoepfe) {
+                    meldung.textContent = "";
+                    meldung.hidden = !text;
+                    if (!text) {
+                        return;
+                    }
+                    const t = document.createElement("span");
+                    t.className = "scan-meldung-text";
+                    t.textContent = text;
+                    meldung.appendChild(t);
+                    for (const k of knoepfe || []) {
+                        meldung.appendChild(k);
+                    }
+                }
+
+                async function suchen(gescannt) {
                     nummer.fehler.textContent = "";
+                    melden("");
                     vorschau.hidden = true;
                     bild = "";
                     const ean = PRODUKTSUCHE.eanPruefen(nummer.feld.value);
@@ -550,32 +609,48 @@ const KASSE_BLATT = {
                         return;
                     }
                     nummer.feld.value = ean;
+                    const vorhanden = STEUERUNG.stand ? KASSE.produktMitEan(STEUERUNG.stand, ean) : null;
+                    if (vorhanden) {
+                        KASSE_BLATT._schonDa(vorhanden, melden);
+                        return;
+                    }
+                    if (!PRODUKTSUCHE.pruefzifferOk(ean)) {
+                        nummer.fehler.textContent = PRODUKTSUCHE.rueckmeldung({ art: "pruefziffer" }, gescannt === true).text;
+                        return;
+                    }
                     KASSE_BLATT._beschaeftigt(el, true);
+                    let e = null;
                     try {
-                        const e = await PRODUKTSUCHE.suchen(ean);
-                        if (!e.ok) {
-                            nummer.fehler.textContent = e.text || "Dienst antwortet nicht";
-                            return;
-                        }
-                        if (!e.gefunden) {
-                            nummer.fehler.textContent = "Nicht gefunden · Name von Hand";
-                            name.feld.focus();
-                            return;
-                        }
+                        e = await PRODUKTSUCHE.suchen(ean);
+                    } catch (fehler) {
+                        const netz = (typeof UPCREW_OFFLINE !== "undefined") && UPCREW_OFFLINE.istNetzFehler(fehler);
+                        e = { ok: false, netz: netz };
+                    } finally {
+                        KASSE_BLATT._beschaeftigt(el, false);
+                    }
+                    const r = PRODUKTSUCHE.rueckmeldung(e, gescannt === true);
+                    if (r.art === "treffer") {
                         name.feld.value = e.name;
                         marke.feld.value = e.marke;
                         bild = e.bild;
                         KASSE_BLATT._vorschauFuellen(vorschau, e);
-                    } catch (fehler) {
-                        const netz = (typeof UPCREW_OFFLINE !== "undefined") && UPCREW_OFFLINE.istNetzFehler(fehler);
-                        nummer.fehler.textContent = netz ? "Kein Netz · Name von Hand" : "Dienst antwortet nicht";
-                    } finally {
-                        KASSE_BLATT._beschaeftigt(el, false);
+                        return;
                     }
+                    /* „Nochmal“ räumt die Meldung samt sich selbst weg — erst NACH dem Tipp (Lehre der
+                       App: sonst hält das Blatt den Tipp für einen auf den Grund). */
+                    melden(r.text, r.nochmal ? [DIALOG.knopf("Nochmal", "still", () => setTimeout(() => suchen(gescannt), 0))] : []);
+                    name.feld.focus();
                 }
 
                 const knopf = DIALOG.knopf("Anlegen", "haupt", async () => {
                     name.fehler.textContent = "";
+                    /* Auch ohne „Suchen“: gleicher Strichcode wie ein Produkt der Kasse → „Schon da“
+                       statt eines zweiten Produkts (Gegenprüfung 0.11.0). */
+                    const gleich = STEUERUNG.stand ? KASSE.produktMitEan(STEUERUNG.stand, PRODUKTSUCHE.eanPruefen(nummer.feld.value)) : null;
+                    if (gleich) {
+                        KASSE_BLATT._schonDa(gleich, melden);
+                        return;
+                    }
                     if (!name.feld.value.trim()) {
                         name.fehler.textContent = "Name fehlt";
                         return;
@@ -629,12 +704,31 @@ const KASSE_BLATT = {
             await SCANNER.starten(video, (code) => {
                 huelle.remove();
                 nummer.feld.value = code;
-                suchen();
+                suchen(true);
             });
         } catch (fehler) {
             huelle.remove();
-            nummer.fehler.textContent = "Kamera nicht erlaubt";
+            nummer.fehler.textContent = "Kamera aus · Nummer eintippen";
+            nummer.feld.focus();
         }
+    },
+
+    /* Der Code gehört schon zu einem Produkt der Kasse (0.11.0): kein zweites anlegen, sondern
+       mit EINEM Tipp „Gekauft“ (wie das „+“ im Bestand, danach die Leiste dort) oder ansehen. */
+    _schonDa(produkt, melden) {
+        const gekauft = DIALOG.knopf("Gekauft", "still", async () => {
+            gekauft.disabled = true;
+            const eintragId = await STEUERUNG.kaufen(produkt.id, 1);
+            if (!eintragId) {
+                gekauft.disabled = false;
+                melden("Nicht eingetragen");
+                return;
+            }
+            UPCREW_BLATT.schliessen();
+            START.schnellZeigen(produkt.id, eintragId);
+        });
+        const ansehen = DIALOG.knopf("Ansehen", "still", () => PRODUKTE.blatt(produkt.id));
+        melden("Schon da: " + produkt.name, [gekauft, ansehen]);
     },
 
     /* Die Vorschau des Treffers ist seit 0.10.0 ein Knopf → die Produktdetails (Nährwerte, großes

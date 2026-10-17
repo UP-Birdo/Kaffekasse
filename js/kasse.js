@@ -71,7 +71,7 @@ const KASSE = {
         dran: "Wenigste Käufe · längste Pause · Name",
         ruecknahme: "Nur eigene · kurze Frist",
         zeitraum: "30 Tage oder alles",
-        rechte: "Kauf, Preis, Laden, MHD, Für: wer eingetragen hat · Geöffnet und leer: alle"
+        rechte: "Kauf, Preis, Laden, haltbar bis, Für: wer eingetragen hat · Geöffnet und leer: alle"
     },
 
     /* ---------------------------------------------------------------- *
@@ -317,7 +317,10 @@ const KASSE = {
         return KASSE.istMitglied(stand, uid) ? stand.mitglieder[uid].name : "";
     },
 
-    beitreten(stand, uid, mitgliedName, zeit) {
+    /* `code` (wahlfrei, 0.11.0, Regel-Vorschlag „Beitritt“): der Beitrittscode als Beleg im
+       NEUEN Mitglieds-Knoten — erst senden, wenn die Regel das Feld kennt (KONFIG.beitrittMitCode);
+       die heutige Regel lehnt jedes Zusatzfeld ab. Wer schon Mitglied ist, schickt ihn nie. */
+    beitreten(stand, uid, mitgliedName, zeit, code) {
         const s = KASSE.normalisieren(stand);
         const kennung = KASSE._text(uid);
         if (!kennung) {
@@ -327,6 +330,9 @@ const KASSE = {
             name: KASSE._text(mitgliedName, KASSE.NAME_MAX) || (s.mitglieder[kennung] && s.mitglieder[kennung].name) || "Mitglied",
             seit: (s.mitglieder[kennung] && s.mitglieder[kennung].seit) || KASSE._zahl(zeit)
         });
+        if (!s.mitglieder[kennung] && KASSE.codePruefen(code)) {
+            neu.code = KASSE.codePruefen(code);
+        }
         s.mitglieder = Object.assign({}, s.mitglieder, { [kennung]: neu });
         s.geaendertAm = KASSE._marke(s, zeit);
         return { stand: s, aenderungen: { ["mitglieder/" + kennung]: neu, geaendertAm: s.geaendertAm } };
@@ -765,6 +771,50 @@ const KASSE = {
         }));
     },
 
+    /* Name für „Zuletzt gekauft“ — gelöscht oder unbekannt: „ein gelöschtes Produkt“ (Gegenprüfung). */
+    _produktName(stand, produktId) {
+        const p = (stand && stand.produkte) ? stand.produkte[produktId] : null;
+        return (p && p.name) ? p.name : "ein gelöschtes Produkt";
+    },
+
+    /* Wer hat zuletzt gekauft (0.11.0, Kasse-Karte): die neuesten gültigen Packungen nach
+       Kaufdatum, höchstens `anzahl`. → [{ id, produktId, produktName, kaeufer, name, kauf }] */
+    zuletztGekauft(stand, anzahl) {
+        const s = (stand && stand.eintraege) ? stand : KASSE.normalisieren(stand);
+        return KASSE.packungen(s, {}).slice(0, Math.max(0, Math.floor(KASSE._zahl(anzahl, 3)))).map((e) => ({
+            id: e.id,
+            produktId: e.produktId,
+            produktName: KASSE._produktName(s, e.produktId),
+            kaeufer: KASSE.kaeufer(e),
+            name: KASSE.mitgliedName(s, KASSE.kaeufer(e)) || "Ehemals",
+            kauf: e.kauf
+        }));
+    },
+
+    /* Der letzte Kauf je Mitglied (0.11.0, Mitglieder-Blatt). → { uid: { produktName, kauf } }
+       — wer nie gekauft hat, fehlt. */
+    letzterJeMitglied(stand) {
+        const s = (stand && stand.eintraege) ? stand : KASSE.normalisieren(stand);
+        const aus = {};
+        for (const e of KASSE.packungen(s, {})) {
+            const k = KASSE.kaeufer(e);
+            if (k && !aus[k]) {
+                aus[k] = { produktName: KASSE._produktName(s, e.produktId), kauf: e.kauf };
+            }
+        }
+        return aus;
+    },
+
+    /* Ein aktives Produkt der Kasse mit diesem Strichcode (0.11.0: Scan eines bekannten
+       Produkts → „Schon da“ statt eines zweiten Produkts). null ohne Treffer. */
+    produktMitEan(stand, ean) {
+        const code = KASSE._text(ean).replace(/[^0-9]/g, "");
+        if (!code) {
+            return null;
+        }
+        return KASSE.produkteAktiv(stand).find((p) => p.ean === code) || null;
+    },
+
     /* Den Verlauf nach Tagen bündeln, neueste zuerst: [{ schluessel, name, eintraege }]. */
     nachTag(liste, heute) {
         const tage = [];
@@ -902,6 +952,48 @@ const KASSE = {
             });
         });
         return { gesamt: gesamt, personen: personen, produkte: produkte };
+    },
+
+    /* Ausgaben je Monat (0.12.0, dritte Welle) aus den vorhandenen Preisen: die letzten `anzahl`
+       Kalendermonate bis `jetzt` (Ortszeit, nach Kaufdatum), älteste zuerst, auch leere Monate.
+       → [{ schluessel "2026-10", name "Okt" (mit Jahr, wenn es nicht das von jetzt ist),
+            packungen, mitPreis, ausgaben (Cent), anteil (0 … 1 am teuersten Monat) }] */
+    MONATE: ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"],
+
+    ausgabenJeMonat(stand, jetzt, anzahl) {
+        const n = Math.max(1, Math.floor(KASSE._zahl(anzahl, 6)));
+        const heute = new Date(KASSE._zahl(jetzt));
+        const monate = [];
+        for (let i = n - 1; i >= 0; i--) {
+            const d = new Date(heute.getFullYear(), heute.getMonth() - i, 1);
+            const jahr = d.getFullYear();
+            monate.push({
+                schluessel: jahr + "-" + String(d.getMonth() + 1).padStart(2, "0"),
+                name: KASSE.MONATE[d.getMonth()] + (jahr !== heute.getFullYear() ? " " + jahr : ""),
+                packungen: 0, mitPreis: 0, ausgaben: 0, anteil: 0
+            });
+        }
+        const je = {};
+        for (const m of monate) {
+            je[m.schluessel] = m;
+        }
+        for (const e of KASSE.packungen(stand, {})) {
+            const d = new Date(e.kauf);
+            const m = je[d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0")];
+            if (!m) {
+                continue;
+            }
+            m.packungen += e.menge;
+            if (typeof e.preis === "number") {
+                m.mitPreis += e.menge;
+                m.ausgaben += e.preis * e.menge;
+            }
+        }
+        const hoechste = monate.reduce((a, m) => Math.max(a, m.ausgaben), 0);
+        for (const m of monate) {
+            m.anteil = hoechste > 0 ? m.ausgaben / hoechste : 0;
+        }
+        return monate;
     },
 
     /* Alle Fakten eines Produkts (alle Zeit) für das Produkt-Blatt. */

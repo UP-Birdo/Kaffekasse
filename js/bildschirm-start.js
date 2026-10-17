@@ -8,7 +8,8 @@
  * seit 0.9.0 das runde „+“ rechts neben dem Produkt (statt „+ Gekauft“ unten), Tipp auf Bild und
  * Name öffnet alle Fakten des Produkts (Blatt aus js\bildschirm-produkte.js). Nach dem „+“ die
  * kleine Leiste „Laden · Angebot · MHD“ (vorbefüllt); „Eben …“ und jede Zeile öffnen das
- * Packungs-Blatt.
+ * Packungs-Blatt. Seit 0.11.0 unter der Kasse die Zeile „Einkaufsliste“ (nur wenn etwas bald
+ * leer ist) und „haltbar bis“ statt „MHD“ (das Kürzel nur noch in der engen Leiste).
  *
  * Der Bildschirm rechnet nichts — Zahlen und Regeln kommen aus dem Modell (js\kasse.js,
  * js\bestand.js),
@@ -84,6 +85,7 @@ const START = {
             return;
         }
         START._kasseKopf(ort, S.stand);
+        START._einkaufZeile(ort);
         const produkte = KASSE.produkteAktiv(S.stand);
         if (produkte.length === 0) {
             const karte = START._karte(ort, "Produkte");
@@ -130,6 +132,156 @@ const START = {
         zeile.appendChild(code);
         zeile.addEventListener("click", () => KASSE_BLATT.kasseKarte());
         ort.appendChild(zeile);
+    },
+
+    /* „Teilen“ und „Kopieren“ der offenen Liste (0.12.0, wie der Einladen-Block der Kasse-Karte):
+       z. B. an den, der gerade einkaufen geht. Ohne offene Zeile keine Knöpfe. */
+    _einkaufTeilen(el, liste, jetzt) {
+        const text = BESTAND.einkaufTeilen(liste, jetzt, STEUERUNG.stand ? STEUERUNG.stand.name : "");
+        if (!text) {
+            return;
+        }
+        const reihe = document.createElement("div");
+        reihe.className = "kasse-einladen-knoepfe einkauf-teilen";
+        const meldung = document.createElement("div");
+        meldung.className = "feld-hinweis einkauf-meldung";
+        meldung.setAttribute("role", "status");
+        const kopieren = () => {
+            const ablage = (typeof navigator !== "undefined") ? navigator.clipboard : null;
+            if (!ablage || typeof ablage.writeText !== "function") {
+                meldung.textContent = "Kopieren geht hier nicht";
+                return;
+            }
+            ablage.writeText(text).then(() => { meldung.textContent = "Liste kopiert"; },
+                () => { meldung.textContent = "Kopieren geht hier nicht"; });
+        };
+        if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+            reihe.appendChild(DIALOG.knopf("Teilen", "still", () => {
+                /* Abbruch durch den Menschen (AbortError) bleibt still; jeder andere Fehler fällt
+                   auf „Kopieren“ zurück (Gegenprüfung 0.12.0). */
+                navigator.share({ text: text }).catch((fehler) => {
+                    if (!fehler || fehler.name !== "AbortError") {
+                        kopieren();
+                    }
+                });
+            }));
+        }
+        reihe.appendChild(DIALOG.knopf("Kopieren", "still", kopieren));
+        el.appendChild(reihe);
+        el.appendChild(meldung);
+    },
+
+    /* ---------------------------------------------------------------- *
+     * Einkaufsliste (0.11.0): eine Zeile unter der Kasse, nur wenn etwas bald leer ist; Tipp →
+     * Blatt mit je Produkt einem Haken (nur am Gerät) und dem „+“ (EIN Tipp = gekauft).
+     * ---------------------------------------------------------------- */
+
+    _einkaufZeile(ort) {
+        const liste = STEUERUNG.einkauf();
+        if (!liste.length) {
+            return;
+        }
+        const offen = liste.filter((x) => !x.abgehakt).length;
+        const menue = document.createElement("div");
+        menue.className = "menue einkauf-menue";
+        menue.appendChild(PRODUKTE.menueZeile("Einkaufsliste",
+            offen + (offen === 1 ? " Produkt" : " Produkte") + (offen < liste.length ? " · " + (liste.length - offen) + " abgehakt" : ""),
+            () => START.einkaufBlatt()));
+        ort.appendChild(menue);
+    },
+
+    /* Was in DIESEM Blatt schon per „+“ eingetragen ist ({ produktId: eintragId }) — gilt bis
+       zum nächsten Öffnen; so trägt ein zweiter Tipp keine zweite Packung ein. */
+    einkaufEben: {},
+
+    einkaufBlatt() {
+        if (typeof UPCREW_BLATT === "undefined" || !STEUERUNG.stand) {
+            return;
+        }
+        START.einkaufEben = {};
+        UPCREW_BLATT.oeffnen({
+            titel: "Einkaufsliste",
+            klasse: "blatt-einkauf",
+            inhalt: (el) => START._einkaufZeichnen(el)
+        });
+    },
+
+    /* Neu gezeichnet wird erst NACH dem Tipp (setTimeout 0, Lehre der App): sonst hängt der
+       getippte Knopf schon nicht mehr im Blatt, und das Blatt hält den Tipp für einen auf den
+       Grund. */
+    _einkaufZeichnen(el) {
+        el.textContent = "";
+        const jetzt = STEUERUNG.jetzt();
+        const liste = STEUERUNG.einkauf();
+        /* Dieselbe Kennung wie beim Schreiben (Gegenprüfung 0.12.0). */
+        const uid = STEUERUNG._uid();
+        if (!liste.length) {
+            el.appendChild(ZUSTAND.leer({ zeichen: "tasse", text: "Nichts bald leer" }));
+            return;
+        }
+        const gruppe = document.createElement("div");
+        gruppe.className = "einkauf-liste";
+        for (const x of liste) {
+            const eben = !!START.einkaufEben[x.produkt.id];
+            const zeile = document.createElement("div");
+            zeile.className = "einkauf-zeile" + (x.abgehakt || eben ? " einkauf-ab" : "") + (x.art === "kaufen" && !eben ? " einkauf-kaufen" : "");
+            const haken = document.createElement("button");
+            haken.type = "button";
+            haken.className = "einkauf-haken";
+            haken.setAttribute("aria-pressed", x.abgehakt ? "true" : "false");
+            haken.setAttribute("aria-label", x.produkt.name + (x.abgehakt ? " · Haken weg" : " · abhaken"));
+            const kasten = document.createElement("span");
+            kasten.className = "einkauf-kasten";
+            kasten.setAttribute("aria-hidden", "true");
+            haken.appendChild(kasten);
+            const text = document.createElement("span");
+            text.className = "einkauf-text";
+            const b = document.createElement("b");
+            b.textContent = x.produkt.name;
+            const s = document.createElement("small");
+            s.textContent = eben ? "Eben eingetragen" : BESTAND.einkaufText(x, jetzt, uid);
+            text.appendChild(b);
+            text.appendChild(s);
+            haken.appendChild(text);
+            haken.addEventListener("click", () => {
+                STEUERUNG.abhaken(x.produkt.id, !x.abgehakt);
+                setTimeout(() => {
+                    START._einkaufZeichnen(el);
+                    NAVIGATION.veralten("start");
+                }, 0);
+            });
+            zeile.appendChild(haken);
+            const plus = DIALOG.knopf("", "still", async () => {
+                plus.disabled = true;
+                const eintragId = await STEUERUNG.kaufen(x.produkt.id, 1);
+                if (!eintragId) {
+                    plus.disabled = false;
+                    DIALOG.hinweis({ titel: x.produkt.name, text: "Nicht eingetragen" });
+                    return;
+                }
+                START.einkaufEben[x.produkt.id] = eintragId;
+                START.schnellZeigen(x.produkt.id, eintragId);
+                setTimeout(() => START._einkaufZeichnen(el), 0);
+            });
+            plus.classList.add("einkauf-plus");
+            plus.appendChild(ZUSTAND.zeichen("plus", "bk-plus-zeichen"));
+            plus.setAttribute("aria-label", x.produkt.name + " gekauft");
+            plus.title = "Gekauft";
+            if (eben) {
+                /* Eben eingetragen: kein zweites „+“ in diesem Blatt (Gegenprüfung 0.11.0). */
+                haken.disabled = true;
+                haken.setAttribute("aria-pressed", "true");
+            } else {
+                zeile.appendChild(plus);
+            }
+            gruppe.appendChild(zeile);
+        }
+        el.appendChild(gruppe);
+        START._einkaufTeilen(el, liste, jetzt);
+        const fuss = document.createElement("p");
+        fuss.className = "feld-hinweis einkauf-fuss";
+        fuss.textContent = BESTAND.ERKLAERUNG.einkauf;
+        el.appendChild(fuss);
     },
 
     /* Die Bestand-Karte eines Produkts (seit 0.8.0, Nutzer 10.10.2026: „nicht das Produkt
@@ -215,6 +367,10 @@ const START = {
         const schnell = START._schnellLeiste(stand, produkt);
         if (schnell) {
             karte.appendChild(schnell);
+        }
+        const rueck = START._rueckLeiste(produkt);
+        if (rueck) {
+            karte.appendChild(rueck);
         }
 
         const eben = S.eigenerLetzter(produkt.id);
@@ -312,10 +468,12 @@ const START = {
     _zeileOffen(e, jetzt) {
         /* „geöffnet am“ steht seit 0.10.0 nur noch in der Packung (Tipp auf die Zeile). */
         const oben = e.bis ? "bis " + START._tag(e.bis, jetzt) : "offen";
-        const unten = e.bis ? BESTAND.restText(e.restTage) : "seit " + START._tag(e.geoeffnetAm, jetzt);
-        const z = START._zeile("bk-offen" + (e.restTage !== null && e.restTage <= 0 ? " bk-drueber" : e.restTage !== null && e.restTage <= 1 ? " bk-knapp" : ""),
+        /* Ohne „offen haltbar“ seit 0.12.0 „offen seit n Tagen“, länger als üblich markiert. */
+        const unten = e.bis ? BESTAND.restText(e.restTage) : BESTAND.seitText(e);
+        const z = START._zeile("bk-offen" + (e.restTage !== null && e.restTage <= 0 ? " bk-drueber"
+            : (e.restTage !== null && e.restTage <= 1) || e.laenger ? " bk-knapp" : ""),
             "Offen", oben, unten, "Leer",
-            () => STEUERUNG.packungAendern(e.id, { leerAm: STEUERUNG.jetzt() }), e.id,
+            () => START._mitRueckgaengig(e, "leer", { leerAm: STEUERUNG.jetzt() }), e.id,
             e.menge > 1 ? " · " + e.menge + " Stk." : "");
         if (e.anteil !== null) {
             const balken = document.createElement("span");
@@ -329,11 +487,124 @@ const START = {
     },
 
     _zeileZu(e, jetzt) {
-        const oben = e.mhd ? "MHD " + START._tag(e.mhd, jetzt) : "ohne MHD";
+        const oben = e.mhd ? "haltbar bis " + START._tag(e.mhd, jetzt) : "ohne Haltbarkeit";
         const unten = "gekauft " + START._tag(e.kauf, jetzt) + (e.abgelaufen ? " · abgelaufen" : "");
         return START._zeile("bk-zu" + (e.abgelaufen ? " bk-drueber" : ""), "Zu", oben, unten, "Öffnen",
-            () => STEUERUNG.packungAendern(e.id, { geoeffnetAm: STEUERUNG.jetzt() }), e.id,
+            () => START._oeffnen(e), e.id,
             e.menge > 1 ? " · " + e.menge + " Stk." : "").zeile;
+    },
+
+    /* ---------------------------------------------------------------- *
+     * Rückgängig nach „Leer“ und „Öffnen“ (0.12.0, dritte Welle): ein paar Sekunden lang steht
+     * in der Karte „Leer eingetragen · Rückgängig“; ein Tipp löscht das Datum wieder (dieselbe
+     * Änderung wie im Packungs-Blatt, kein neues Feld). Danach verschwindet die Zeile von selbst.
+     * ---------------------------------------------------------------- */
+
+    rueck: null,
+    rueckUhr: null,
+
+    RUECK_TEXT: { leer: "Leer eingetragen", offen: "Geöffnet" },
+
+    /* `START.rueck` = { produktId, art, schritte: [{ id, feld, wert }] } — jeder Schritt merkt sich
+       den geschriebenen Wert; zurückgenommen wird nur, was noch genau so dasteht
+       (BESTAND.rueckgaengigFelder, Gegenprüfung Welle 3). */
+    async _mitRueckgaengig(e, art, felder) {
+        const ergebnis = await STEUERUNG.packungAendern(e.id, felder);
+        if (ergebnis && ergebnis.ok !== false) {
+            const feld = art === "leer" ? "leerAm" : "geoeffnetAm";
+            START.rueck = { produktId: e.produktId, art: art, schritte: [{ id: e.id, feld: feld, wert: felder[feld] }] };
+            START._rueckUhrStarten();
+        }
+        return ergebnis;
+    },
+
+    _rueckUhrStarten() {
+        if (START.rueckUhr) {
+            clearTimeout(START.rueckUhr);
+        }
+        START.rueckUhr = setTimeout(() => {
+            START.rueckUhr = null;
+            START.rueck = null;
+            NAVIGATION.veralten("start");
+        }, KONFIG.rueckgaengigMs);
+        NAVIGATION.veralten("start");
+    },
+
+    _rueckLeiste(produkt) {
+        const r = START.rueck;
+        if (!r || r.produktId !== produkt.id) {
+            return null;
+        }
+        const zeile = document.createElement("div");
+        zeile.className = "produkt-eben bk-rueck";
+        zeile.setAttribute("role", "status");
+        const text = document.createElement("span");
+        text.className = "bk-rueck-text";
+        text.textContent = START.RUECK_TEXT[r.art] || "";
+        zeile.appendChild(text);
+        const knopf = DIALOG.knopf("Rückgängig", "still", async () => {
+            knopf.disabled = true;
+            if (START.rueckUhr) {
+                clearTimeout(START.rueckUhr);
+                START.rueckUhr = null;
+            }
+            START.rueck = null;
+            const plan = STEUERUNG.stand ? BESTAND.rueckgaengigFelder(STEUERUNG.stand, r.schritte) : [];
+            if (!plan.length) {
+                NAVIGATION.veralten("start");
+                DIALOG.hinweis({ titel: produkt.name, text: "Schon geändert · nichts zurückgenommen" });
+                return;
+            }
+            let fehler = "";
+            for (const p of plan) {
+                const ergebnis = await STEUERUNG.packungAendern(p.id, p.felder);
+                if (!ergebnis || ergebnis.ok === false) {
+                    fehler = (ergebnis && ergebnis.text) || "Abgelehnt";
+                }
+            }
+            NAVIGATION.veralten("start");
+            if (fehler) {
+                DIALOG.hinweis({ titel: produkt.name, text: "Nicht zurückgenommen · " + fehler });
+            }
+        });
+        knopf.classList.add("produkt-zurueck");
+        zeile.appendChild(knopf);
+        return zeile;
+    },
+
+    /* „Öffnen“ (seit 0.12.0 mit Nachfrage): Ist vom selben Produkt noch eine andere Packung offen,
+       schlägt die App GENAU EINE als leer vor — die älteste offene (BESTAND.alteOffene; nach der
+       Gegenprüfung nie mehrere mit einem Tipp). Nach dem Dialog wird frisch nachgesehen (ein
+       anderes Gerät kann sie inzwischen geleert haben); Fehler beim Leer-Schreiben werden gemeldet. */
+    async _oeffnen(e) {
+        const ergebnis = await START._mitRueckgaengig(e, "offen", { geoeffnetAm: STEUERUNG.jetzt() });
+        const vorschlag = (ergebnis && ergebnis.ok !== false && STEUERUNG.stand)
+            ? BESTAND.alteOffene(STEUERUNG.stand, e.produktId, e.id, STEUERUNG.jetzt()) : null;
+        if (!vorschlag) {
+            return ergebnis;
+        }
+        const produkt = STEUERUNG.stand.produkte[e.produktId];
+        const ja = await DIALOG.frage({ titel: produkt ? produkt.name : "Packung", text: vorschlag.text, ja: "Leer", nein: "Noch nicht" });
+        if (!ja) {
+            return ergebnis;
+        }
+        const nochOffen = STEUERUNG.stand && BESTAND.andereOffene(STEUERUNG.stand, e.produktId, e.id).some((x) => x.id === vorschlag.id);
+        if (!nochOffen) {
+            return ergebnis;
+        }
+        const leerAm = STEUERUNG.jetzt();
+        const leer = await STEUERUNG.packungAendern(vorschlag.id, { leerAm: leerAm });
+        if (!leer || leer.ok === false) {
+            DIALOG.hinweis({ titel: produkt ? produkt.name : "Packung", text: "Leer nicht gespeichert" + (leer && leer.text ? " · " + leer.text : "") });
+            return ergebnis;
+        }
+        /* „Rückgängig“ nimmt dieses Leer mit zurück (Gegenprüfung Welle 3) — und läuft ab hier neu. */
+        const r = START.rueck;
+        if (r && r.art === "offen" && r.schritte[0].id === e.id) {
+            r.schritte.push({ id: vorschlag.id, feld: "leerAm", wert: leerAm });
+            START._rueckUhrStarten();
+        }
+        return ergebnis;
     },
 
     /* Das Untermenü der verschlossenen Packungen (nur bei langer Liste). */
@@ -344,7 +615,7 @@ const START = {
         knopf.setAttribute("aria-expanded", offen ? "true" : "false");
         const mhd = p.zu.find((e) => e.mhd);
         const text = document.createElement("span");
-        text.textContent = "Im Schrank: " + p.vorrat + (mhd ? " · MHD ab " + START._tag(mhd.mhd, jetzt) : "");
+        text.textContent = "Im Schrank: " + p.vorrat + (mhd ? " · haltbar bis " + START._tag(mhd.mhd, jetzt) : "");
         knopf.appendChild(text);
         knopf.appendChild(ZUSTAND.zeichen("pfeil", "bk-schrank-pfeil"));
         knopf.addEventListener("click", () => {

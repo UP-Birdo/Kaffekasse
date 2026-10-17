@@ -39,6 +39,41 @@ const PRODUKTSUCHE = {
         return [8, 12, 13, 14].indexOf(ziffern.length) !== -1 ? ziffern : "";
     },
 
+    /* Prüfziffer (0.11.0): die letzte Ziffer jedes EAN/UPC/GTIN folgt aus den übrigen (von rechts
+       abwechselnd × 3 und × 1). Falsch = falsch gelesen oder vertippt — die Datenbank fände nichts. */
+    pruefzifferOk(ean) {
+        const z = PRODUKTSUCHE.eanPruefen(ean);
+        if (!z) {
+            return false;
+        }
+        let summe = 0;
+        for (let i = z.length - 2, faktor = 3; i >= 0; i--, faktor = 4 - faktor) {
+            summe += Number(z.charAt(i)) * faktor;
+        }
+        return (10 - (summe % 10)) % 10 === Number(z.charAt(z.length - 1));
+    },
+
+    /* Was das Produkt-Blatt nach einer Suche sagt (0.11.0, freundlicher bei „kein Treffer“).
+       `ergebnis` wie von suchen() oder { ok: false, netz: true } nach einem Netzfehler;
+       `gescannt` = die Nummer kam von der Kamera. → { art, text, nochmal }
+         art  "treffer" · "unbekannt" (Name von Hand, kein Fehler) · "pruefziffer" · "netz" · "dienst" */
+    rueckmeldung(ergebnis, gescannt) {
+        const e = ergebnis || {};
+        if (e.art === "pruefziffer") {
+            return { art: "pruefziffer", text: gescannt ? "Falsch gelesen · nochmal scannen" : "Nummer prüfen · eine Ziffer passt nicht", nochmal: false };
+        }
+        if (e.ok && e.gefunden) {
+            return { art: "treffer", text: "", nochmal: false };
+        }
+        if (e.ok) {
+            return { art: "unbekannt", text: "Unbekannt in Open Food Facts · Name eintippen", nochmal: false };
+        }
+        if (e.netz) {
+            return { art: "netz", text: "Kein Netz · Name eintippen oder später", nochmal: true };
+        }
+        return { art: "dienst", text: "Open Food Facts antwortet nicht · Name eintippen", nochmal: true };
+    },
+
     _text(wert, max) {
         const t = (typeof wert === "string") ? wert.trim() : "";
         return t.slice(0, max || 40);

@@ -18,6 +18,7 @@
  *   Tipp              ERKLAERUNG.tipp; dazu höchstens so viele Packungen, wie bis zum MHD (bzw.
  *                     zur längsten gemessenen Lagerzeit) verbraucht werden
  *   Vorbelegung       nach dem „+“: Laden, Preis, MHD aus dem letzten Kauf dieses Produkts
+ *   Einkaufsliste     was bald leer ist (Tipp kaufen/warten), Haken nur am Gerät
  */
 
 const BESTAND = {
@@ -29,18 +30,25 @@ const BESTAND = {
     AKTION_MS: 4 * 24 * 60 * 60 * 1000,
     /* „Steht zu lange“ erst, wenn so viele Lagerzeiten gemessen sind. */
     LAGER_MIN_MESSUNGEN: 2,
+    /* „Länger als üblich offen“ erst ab so vielen abgeschlossenen Packungen (geöffnet und leer). */
+    LAENGER_MIN_MESSUNGEN: 3,
 
+    /* Ein Haken auf der Einkaufsliste (0.11.0) gilt so lange — oder bis jemand das Produkt kauft. */
+    ABHAKEN_MS: 7 * 24 * 60 * 60 * 1000,
+
+    /* Seit 0.11.0 „haltbar bis“ statt „MHD“ (Kürzel nur noch in der engen Leiste nach dem „+“). */
     TIPP: {
         kaufen: "Jetzt kaufen",
         warten: "Aufs Angebot warten",
         reicht: "Vorrat reicht",
-        mhd: "MHD bald"
+        mhd: "Läuft bald ab"
     },
 
     ERKLAERUNG: {
-        tipp: "Leer oder vor dem Angebot aus: kaufen · Angebot vorher: warten · MHD ≤ 7 Tage: MHD bald",
+        tipp: "Leer oder vor dem Angebot aus: kaufen · Angebot vorher: warten · haltbar ≤ 7 Tage: läuft bald ab",
         angebot: "Ab 2 Angeboten je Laden",
-        reicht: "Offen + Vorrat × Ø Verbrauch"
+        reicht: "Offen + Vorrat × Ø Verbrauch",
+        einkauf: "Jetzt kaufen und Aufs Angebot warten · Haken gilt bis zum Kauf, höchstens 7 Tage"
     },
 
     _zahl(wert) {
@@ -227,11 +235,21 @@ const BESTAND = {
         const t = KASSE.offenTage(p);
         const heute = KASSE.tagBeginn(j);
         const liste = KASSE.packungen(s, { produktId: produktId });
+        /* Ohne „offen haltbar“ (0.12.0): wie lange eine Packung üblich offen ist (Ø geöffnet → leer,
+           gemessen) — länger offen = Hinweis „länger als üblich“. */
+        const k = KASSE.kennzahlen(liste, { von: 0, bis: j });
+        const abgeschlossen = liste.filter((e) => e.geoeffnetAm && e.leerAm).length;
+        const ueblich = (abgeschlossen >= BESTAND.LAENGER_MIN_MESSUNGEN && k.verbrauchMs !== null && k.verbrauchMs > 0)
+            ? k.verbrauchMs : null;
         const offen = liste.filter((e) => e.geoeffnetAm && !e.leerAm)
             .sort((a, b) => b.geoeffnetAm - a.geoeffnetAm)
             .map((e) => {
                 if (!t.tage) {
-                    return Object.assign({}, e, { bis: null, restTage: null, anteil: null });
+                    return Object.assign({}, e, {
+                        bis: null, restTage: null, anteil: null,
+                        seitTage: Math.max(0, Math.round((heute - KASSE.tagBeginn(e.geoeffnetAm)) / BESTAND.TAG_MS)),
+                        laenger: ueblich !== null && (j - e.geoeffnetAm) > ueblich && (j - e.geoeffnetAm) >= BESTAND.TAG_MS
+                    });
                 }
                 const bis = KASSE.tagBeginn(e.geoeffnetAm) + t.tage * BESTAND.TAG_MS;
                 const rest = Math.round((bis - heute) / BESTAND.TAG_MS);
@@ -242,6 +260,29 @@ const BESTAND = {
             .sort((a, b) => (a.mhd || Infinity) - (b.mhd || Infinity) || a.kauf - b.kauf)
             .map((e) => Object.assign({}, e, { abgelaufen: !!(e.mhd && e.mhd < heute) }));
         return { offen: offen, zu: zu, vorrat: zu.reduce((a, e) => a + e.menge, 0), tage: t.tage, vorschlag: t.vorschlag };
+    },
+
+    /* „Rückgängig“ nach Leer/Öffnen (0.12.0): `schritte` = [{ id, feld, wert }], der erste ist der
+       eigentliche Tipp, weitere hingen daran (das „Leer“ der alten Packung aus der Nachfrage).
+       Zurückgenommen wird nur, was noch GENAU den geschriebenen Wert hat; passt der erste nicht
+       mehr (anderes Gerät, Packungs-Blatt), wird gar nichts zurückgenommen.
+       → [{ id, felder: { <feld>: null } }] (leer = nichts zu tun) */
+    rueckgaengigFelder(stand, schritte) {
+        const s = (stand && stand.eintraege) ? stand : KASSE.normalisieren(stand);
+        const passt = (x) => !!(x && s.eintraege[x.id] && KASSE.gueltig(s.eintraege[x.id]) && s.eintraege[x.id][x.feld] === x.wert);
+        const liste = Array.isArray(schritte) ? schritte : [];
+        if (!liste.length || !passt(liste[0])) {
+            return [];
+        }
+        return liste.filter(passt).map((x) => ({ id: x.id, felder: { [x.feld]: null } }));
+    },
+
+    /* Offene Packung OHNE Tage (0.12.0): „offen seit heute“ · „offen seit 1 Tag“ · „offen seit
+       5 Tagen · länger als üblich“. */
+    seitText(e) {
+        const n = (e && e.seitTage) || 0;
+        const seit = n === 0 ? "offen seit heute" : (n === 1 ? "offen seit 1 Tag" : "offen seit " + n + " Tagen");
+        return seit + (e && e.laenger ? " · länger als üblich" : "");
     },
 
     /* „noch 2 Tage“ · „heute“ · „seit 1 Tag drüber“ — für eine offene Packung mit Tagen. */
@@ -375,6 +416,117 @@ const BESTAND = {
     },
 
     /* ---------------------------------------------------------------- *
+     * Einkaufsliste (0.11.0): was bald leer ist, zum Abhaken. Die Haken liegen nur am Gerät
+     * ({ produktId: Zeit des Hakens }) — kein neues Feld in der Datenbank.
+     * ---------------------------------------------------------------- */
+
+    /* Gilt ein Haken noch? Nicht älter als ABHAKEN_MS und seitdem kein „+“ für das Produkt. */
+    abgehaktGilt(stand, produktId, zeit, jetzt) {
+        const z = BESTAND._zahl(zeit);
+        const j = BESTAND._zahl(jetzt);
+        if (!(z > 0) || j - z >= BESTAND.ABHAKEN_MS) {
+            return false;
+        }
+        return !KASSE.eintraegeVon(stand, { produktId: produktId }).some((e) => e.wann >= z);
+    },
+
+    /* Nur die Haken, die noch gelten (zum Zurückschreiben ans Gerät). */
+    abgehaktAufraeumen(stand, abgehakt, jetzt) {
+        const a = (abgehakt && typeof abgehakt === "object") ? abgehakt : {};
+        const aus = {};
+        for (const id of Object.keys(a)) {
+            if (BESTAND.abgehaktGilt(stand, id, a[id], jetzt)) {
+                aus[id] = a[id];
+            }
+        }
+        return aus;
+    },
+
+    /* Die Liste: je aktivem Produkt mit Tipp „Jetzt kaufen“ oder „Aufs Angebot warten“.
+       → [{ produkt, art, text, menge, angebot, leer, abgehakt }]; offene vor abgehakten, kaufen
+       vor warten, leer zuerst, dann der Name. */
+    einkaufsliste(stand, jetzt, abgehakt) {
+        const a = (abgehakt && typeof abgehakt === "object") ? abgehakt : {};
+        const liste = BESTAND.bestand(stand, jetzt)
+            .filter((b) => b.tipp && (b.tipp.art === "kaufen" || b.tipp.art === "warten"))
+            .map((b) => ({
+                produkt: b.produkt,
+                art: b.tipp.art,
+                text: b.tipp.text,
+                menge: b.tipp.menge,
+                angebot: b.tipp.art === "warten" ? b.naechstesAngebot : null,
+                leer: b.leer,
+                /* Wer dran ist (0.12.0) — dieselbe Regel wie im Produkt-Blatt (alle Zeit). */
+                dran: KASSE.naechsterDran(stand, b.produkt.id),
+                abgehakt: BESTAND.abgehaktGilt(stand, b.produkt.id, a[b.produkt.id], jetzt)
+            }))
+            .map((x) => Object.assign(x, { dranName: x.dran ? KASSE.mitgliedName(stand, x.dran) : "" }));
+        const rang = (x) => (x.abgehakt ? 10 : 0) + (x.art === "kaufen" ? 0 : 2) + (x.leer ? 0 : 1);
+        return liste.sort((x, y) => rang(x) - rang(y)
+            || x.produkt.name.localeCompare(y.produkt.name, "de", { sensitivity: "base" }));
+    },
+
+    /* Die Unterzeile einer Zeile: „Jetzt kaufen · 2 Stk.“ · „Aufs Angebot warten · Lidl ~Mo 14.10.“ */
+    einkaufText(x, jetzt, uid) {
+        const teile = [x.leer ? "Leer" : x.text];
+        if (x.menge) {
+            teile.push(x.menge + " Stk.");
+        }
+        if (x.angebot) {
+            teile.push(x.angebot.laden + " ~" + KASSE.datumKurz(x.angebot.naechstes, jetzt));
+        }
+        /* Seit 0.12.0: wer dran ist — nur, wenn die eigene Kennung übergeben wird. */
+        if (uid !== undefined && x.dran) {
+            teile.push("Dran: " + (x.dran === uid ? "Du" : (x.dranName || "Ehemals")));
+        }
+        return teile.join(" · ");
+    },
+
+    /* Die offene Liste als Text zum Teilen (0.12.0): Kopfzeile mit dem Namen der Kasse, je nicht
+       abgehaktem Produkt eine Zeile „- Name · Menge · Laden ~Tag“. "" ohne offene Zeile. */
+    einkaufTeilen(liste, jetzt, kassenName) {
+        const offen = (liste || []).filter((x) => !x.abgehakt);
+        if (!offen.length) {
+            return "";
+        }
+        const zeilen = offen.map((x) => {
+            const teile = [x.produkt.name];
+            if (x.menge) {
+                teile.push(x.menge + " Stk.");
+            }
+            if (x.angebot) {
+                teile.push(x.angebot.laden + " ~" + KASSE.datumKurz(x.angebot.naechstes, jetzt));
+            }
+            return "- " + teile.join(" · ");
+        });
+        return ["Einkaufsliste" + (kassenName ? " " + kassenName : "")].concat(zeilen).join("\n");
+    },
+
+    /* Beim Öffnen einer Packung (0.12.0): die ANDEREN noch offenen Packungen desselben Produkts,
+       zuletzt geöffnete zuerst — die App fragt dann „Alte Packung leer?“ (ein Tipp statt zwei). */
+    andereOffene(stand, produktId, eintragId) {
+        return KASSE.eintraegeVon(stand, { produktId: produktId })
+            .filter((e) => e.id !== eintragId && e.geoeffnetAm && !e.leerAm)
+            .sort((a, b) => b.geoeffnetAm - a.geoeffnetAm);
+    },
+
+    /* Der EINE Vorschlag nach dem Öffnen (Gegenprüfung 0.12.0: nie mehrere mit einem Tipp): die
+       älteste andere offene Packung. Bei genau einer „Alte Packung leer?“, bei mehreren mit Datum
+       „Alte Packung (geöffnet am …) leer?“. → { id, text } oder null. */
+    alteOffene(stand, produktId, eintragId, jetzt) {
+        const andere = BESTAND.andereOffene(stand, produktId, eintragId);
+        if (!andere.length) {
+            return null;
+        }
+        const alt = andere[andere.length - 1];
+        return {
+            id: alt.id,
+            text: andere.length === 1 ? "Alte Packung leer?"
+                : "Alte Packung (geöffnet am " + KASSE.datumKurz(alt.geoeffnetAm, jetzt) + ") leer?"
+        };
+    },
+
+    /* ---------------------------------------------------------------- *
      * Kurze Texte
      * ---------------------------------------------------------------- */
 
@@ -383,6 +535,15 @@ const BESTAND = {
             return "Leer";
         }
         return l.reichtBis ? "Reicht bis ~" + KASSE.datumKurz(l.reichtBis, jetzt) : "Reicht bis –";
+    },
+
+    /* Der Wert der Kachel „Reicht bis“ (Statistik und Produkt, seit 0.11.0 gleich):
+       „Leer“ · „~Sa 12.10.“ · „–“ ohne gemessenen Verbrauch. */
+    reichtKurz(l, jetzt) {
+        if (l.leer) {
+            return "Leer";
+        }
+        return l.reichtBis ? "~" + KASSE.datumKurz(l.reichtBis, jetzt) : "–";
     },
 
     angebotText(a, jetzt) {
@@ -399,7 +560,7 @@ const BESTAND = {
             teile.push("seit " + KASSE.datumKurz(l.aeltesteKauf, jetzt));
         }
         if (l.naechstesMhd) {
-            teile.push("MHD " + KASSE.datumKurz(l.naechstesMhd, jetzt));
+            teile.push("haltbar bis " + KASSE.datumKurz(l.naechstesMhd, jetzt));
         }
         return teile.join(" · ");
     },
