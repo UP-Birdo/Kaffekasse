@@ -13,7 +13,7 @@
 
 const KONFIG = {
 
-    APP_VERSION: "0.14.0",
+    APP_VERSION: "0.14.2",
 
     /*
      * DER FREIGABE-KANAL (seit 0.13.0, Baustein js\freigabe.js, Einbau: UPCrew

@@ -10,7 +10,7 @@
  * Anmeldung (googleapis) gehen nie durch den Zwischenspeicher.
  */
 
-const SPEICHER_NAME = "kaffekasse-v0.14.0";
+const SPEICHER_NAME = "kaffekasse-v0.14.2";
 
 const BEIM_BAUEN = (self.location.hostname === "localhost" || self.location.hostname === "127.0.0.1");
 
@@ -107,11 +107,13 @@ self.addEventListener("install", (ereignis) => {
     );
 });
 
-/* Alte Stände wegräumen, sobald die neue Fassung übernimmt. */
+/* Alte Stände wegräumen, sobald die neue Fassung übernimmt — NUR die eigenen: alle UPCrew-Apps teilen den
+   Ursprung up-birdo.github.io und damit den Cache-Namensraum (Blunderluck/Typoluck haben eigene Caches). */
 self.addEventListener("activate", (ereignis) => {
     ereignis.waitUntil(
         caches.keys().then((namen) => Promise.all(
-            namen.filter((name) => name !== SPEICHER_NAME).map((name) => caches.delete(name))))
+            namen.filter((name) => name.startsWith("kaffekasse-") && name !== SPEICHER_NAME)
+                .map((name) => caches.delete(name))))
             .then(() => self.clients.claim())
     );
 });

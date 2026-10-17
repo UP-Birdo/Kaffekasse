@@ -355,8 +355,11 @@
         }
         await nachladenStill(h);
         if (dialog) {
+            /* F2 (17.10.2026): eine Kennung bei mehreren Konten wird nicht still übergangen. */
+            const doppelt = Array.isArray(ergebnis.doppelt) ? ergebnis.doppelt.length : 0;
             await dialog.hinweis({ titel: TEXTE.nachgezogen, text: ergebnis.geschrieben + " geschrieben · "
-                + ergebnis.uebersprungen + " übersprungen" });
+                + ergebnis.uebersprungen + " übersprungen"
+                + (doppelt > 0 ? " · " + doppelt + " Kennung doppelt" : "") });
         }
         neuZeichnen();
         return ergebnis;

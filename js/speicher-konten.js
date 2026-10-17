@@ -428,6 +428,14 @@ class SpeicherKonten extends SpeicherGemeinsam {
             return;
         }
         this._eingetragen = true;
+        /* F2 (seit 17.10.2026): der Index der eigenen Spieler-Kennung
+           (`spieler/ids/<id>`) — fehlt er, wird er hier einmal nachgetragen;
+           kennt die Regel ihn nicht, passiert nichts. Eigener Schritt, stört
+           den Auszug nicht. `_idSicherung` ist das Versprechen (Tests). */
+        if (typeof KONTO.idSichern === "function") {
+            this._idSicherung = KONTO.idSichern(this, eigener).catch(() => ({ stand: "fehler" }));
+            await this._idSicherung;
+        }
         try {
             const eintrag = Object.assign(SpeicherKonten.eintragFuerServer(eigener), { uid: eigener.uid });
             const pfade = this._auszugBewahren(KONTO.oeffentlichePfade(eintrag, null), eintrag.uid);

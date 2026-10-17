@@ -103,6 +103,16 @@ const KONTO = {
     regelBekannt: false,
     _erkennung: null,
 
+    /* F2 (seit 17.10.2026, Abschnitt „Index der Spieler-Kennungen“): Kennt
+       die Regel `spieler/ids`? null = noch nicht gefragt, sonst true/false.
+       `idKonflikt` = { id, uid, besitzer }, wenn die eigene Spieler-Kennung
+       laut Index einem ANDEREN Konto gehört (sonst null); dann wird
+       `beiIdKonflikt(info)` gerufen, wenn die App es setzt. */
+    idsRegel: null,
+    idKonflikt: null,
+    beiIdKonflikt: null,
+    ID_KONFLIKT_TEXT: "Deine Spieler-Kennung ist einem anderen Konto zugeordnet. Bitte einen Admin um Hilfe.",
+
     /* Datenbank-Adresse und Pfad der Konten (aus KONFIG.speicher). */
     basis: "",
     pfad: "spieler",
@@ -440,6 +450,7 @@ const KONTO = {
             UPCREW_WER_SPIELT.vergessen();
         }
         KONTO._rolleVergessen();
+        KONTO.idKonflikt = null;
         try {
             window.localStorage.removeItem(KONTO.SCHLUESSEL);
         } catch (fehler) {
@@ -488,15 +499,19 @@ const KONTO = {
         if (!tag) {
             return { ok: false, feld: "name", text: "Für diesen Namen ist keine Nummer mehr frei." };
         }
-        const id = KONTO._kennungErzeugen();
-        const ergebnis = await KONTO.registrieren(id, passwort);
+        const kennung = KONTO._kennungErzeugen();
+        const ergebnis = await KONTO.registrieren(kennung, passwort);
         if (!ergebnis.ok) {
             return { ok: false, feld: KONTO.fehlerFeld(ergebnis.fehler), fehler: ergebnis.fehler,
                 text: KONTO.fehlerText(ergebnis.fehler) };
         }
+        /* F2 (seit 17.10.2026): Spieler-Kennung = Konto-Nummer (uid). Nur so darf
+           sich das Konto selbst in `spieler/ids` eintragen; die zufällige Kennung
+           bleibt die Anmelde-Kennung (Teil der erfundenen Adresse). */
+        const id = KONTO.uid();
         /* Seit Regel §12 mit neuem Würfeln, falls die Nummer besetzt ist. */
         const geschrieben = await KONTO._mitNummer(speicher, daten, name, tag,
-            (nummer) => KONTO._neuerEintrag(id, name, nummer, id), null, null);
+            (nummer) => KONTO._neuerEintrag(id, name, nummer, kennung), null, null);
         if (!geschrieben.ok) {
             await KONTO.loeschen();
         }
@@ -511,7 +526,8 @@ const KONTO = {
             return { ok: false, text: ergebnis.fehler === "sonst"
                 ? "Gast-Zugang ist gerade nicht möglich." : KONTO.fehlerText(ergebnis.fehler) };
         }
-        const id = KONTO._kennungErzeugen();
+        /* F2: auch beim Gast Spieler-Kennung = uid (siehe kontoAnlegen). */
+        const id = KONTO.uid();
         const geschrieben = await KONTO._mitNummer(speicher, daten, KONTO.GAST_NAME, tag,
             (nummer) => Object.assign(KONTO._neuerEintrag(id, KONTO.GAST_NAME, nummer, ""), { gast: true }),
             null, null);
@@ -597,8 +613,11 @@ const KONTO = {
         const alt = KONTO._sauber(eintrag);
         const altPlatz = "namen/" + KONTO.nameSchluessel(alt.name) + "/" + alt.tag;
         const markiert = Object.assign({}, alt, { neuVerbinden: true });
-        const schritt1 = await KONTO._schreiben(speicher,
-            { geaendertAm: Date.now(), ["konten/" + alt.uid]: markiert }, markiert);
+        /* F2: fehlt der Index des Gasts noch, kommt er hier mit (sonst lehnte
+           die Regel Stufe 2 den markierten Eintrag ab). */
+        const schritt1 = await KONTO._schreiben(speicher, Object.assign(
+            { geaendertAm: Date.now(), ["konten/" + alt.uid]: markiert },
+            (await KONTO.idPfade(markiert, alt, null)).pfade), markiert);
         if (!schritt1.ok) {
             return { ok: false, feld: "allgemein", text: KONTO.fehlerText("netz") };
         }
@@ -892,6 +911,14 @@ const KONTO = {
         if (KONTO.istP12()) {
             aenderungen["oeffentlich/" + eintrag.uid] = null;
             aenderungen["anmeldung/" + KONTO.nameSchluessel(eintrag.name) + "/" + eintrag.uid] = null;
+            /* F2: der Index der Spieler-Kennung geht mit — nur, wenn er
+               diesem Konto gehört (ein fremder bleibt unangetastet). */
+            if (KONTO._idTauglich(eintrag.id)) {
+                const frage = await KONTO.idBesitzer(eintrag.id);
+                if (frage.regel === true && frage.besitzer === eintrag.uid) {
+                    aenderungen["ids/" + eintrag.id] = null;
+                }
+            }
         }
         return KONTO._schreiben(speicher, aenderungen, null);
     },
@@ -1091,6 +1118,7 @@ const KONTO = {
         }
         if (!KONTO._erkennung) {
             KONTO._erkennung = (async () => {
+                KONTO.idsRegel = null;
                 const antwort = await KONTO._dbRufen("", { flach: true, ohneAnmeldung: true });
                 if (antwort.status === 200) {
                     KONTO.regel = "alt";
@@ -1246,6 +1274,172 @@ const KONTO = {
             }
         }
         return pfade;
+    },
+
+    /* ---------------------------------------------------------------- *
+     * F2 — DER INDEX DER SPIELER-KENNUNGEN (seit 17.10.2026, Befund F2
+     * des Architektur-Befunds vom 17.10.2026)
+     *
+     * Rechte an Typoluck-Ergebnissen und Blunderluck-Partien hängen an der
+     * Spieler-Kennung `id` im eigenen Konto-Eintrag. Bis hier prüfte die Regel
+     * nur „Text, höchstens 64 Zeichen" — wer die `id` eines anderen in sein
+     * Konto schrieb, durfte dessen Ergebnisse und Partien ändern. Jetzt steht
+     * unter `spieler/ids/<id>` die Konto-Nummer (uid), der die Kennung gehört:
+     * NEU ANLEGEN darf ein Konto nur die eigene uid als Kennung (`$id ===
+     * auth.uid`) — sonst nur UP#Plus („§12 nachziehen" für die älteren
+     * Konten). Einen BESTEHENDEN Eintrag ändern: der Besitzer, ein Admin, das
+     * neue Konto beim Neu-Verbinden/Gast-Umzug (alter Eintrag mit
+     * `neuVerbinden`). Eine fremde oder alte Kennung kann sich so niemand
+     * selbst eintragen (Gegenprüfung B1).
+     *
+     * Seit diesem Stand ist die Kennung neuer Konten und Gäste die uid. Ältere
+     * Konten behalten ihre (UUID, „k-…", beim Umzug aus der alten Datenbank
+     * die alte); die Regel lässt eine bestehende Kennung nicht mehr ändern
+     * (ausser auf die eigene uid). Die uid dahinter wechselt beim
+     * Neu-Verbinden, beim Gast-Umzug und beim Umzug — dann zieht der Index
+     * mit; Gast→Konto über Verknüpfen behält die uid.
+     *
+     * Jeder Schritt, der einen Eintrag anlegt oder umzieht
+     * (`_eintragSchreiben`), schreibt den Index mit, wo die Regel es zulässt;
+     * das Laden trägt ihn nach, wenn Kennung = uid (`idSichern`), sonst
+     * wartet es still auf UP#Plus; `eintragEntfernen` räumt ihn weg. Kennt die
+     * Regel den Knoten nicht (Lesen gibt 401), schreibt nichts davon.
+     * ---------------------------------------------------------------- */
+
+    /* Taugt `id` als Schlüssel (Firebase verbietet . # $ [ ] / und
+       Steuerzeichen)? Alle bisherigen Kennungen tun es (UUID, „k-…",
+       „spieler-…", uid). „bot" ist ein freier Sitz in Partien und nie eine
+       Spieler-Kennung (die Regel sperrt sie, Gegenprüfung B2). */
+    _idTauglich(id) {
+        return typeof id === "string" && id.length >= 1 && id.length <= 64 && id !== "bot"
+            && !/[.#$[\]/\u0000-\u001f\u007f]/.test(id);
+    },
+
+    /* Wem gehört `id` laut Index? { regel, besitzer }: regel true (Regel
+       kennt `ids`), false (kennt sie nicht / alte Regel), null (Netz oder
+       ohne Anmeldung unklar); besitzer = uid oder null. Setzt `idsRegel`.
+       Wirft nie. */
+    async idBesitzer(id) {
+        /* Einmal „kennt sie nicht" gilt bis zur nächsten Regel-Erkennung
+           (`regelErkennen` setzt `idsRegel` zurück) — kein Abruf mehr. */
+        if (!KONTO.istP12() || KONTO.idsRegel === false) {
+            return { regel: false, besitzer: null };
+        }
+        if (!KONTO._idTauglich(id) || !KONTO.angemeldet()) {
+            return { regel: null, besitzer: null };
+        }
+        const antwort = await KONTO._dbRufen("ids/" + id);
+        if (antwort.ok) {
+            KONTO.idsRegel = true;
+            return { regel: true, besitzer: (typeof antwort.daten === "string" && antwort.daten !== "")
+                ? antwort.daten : null };
+        }
+        if (antwort.status === 401 || antwort.status === 403) {
+            KONTO.idsRegel = false;
+            return { regel: false, besitzer: null };
+        }
+        return { regel: null, besitzer: null };
+    },
+
+    /*
+     * Die Index-Pfade eines Schritts, der `eintrag` (mit uid) schreibt:
+     * { pfade, konflikt }. Steht der Index schon richtig, kennt die Regel
+     * ihn nicht, oder fehlt das Netz: keine Pfade. Fehlt er: nur, wenn die
+     * Regel das Anlegen zulässt (Kennung = eigene uid, oder UP#Plus) — sonst
+     * keine Pfade, still (der Index kommt über „§12 nachziehen"). Gehört die
+     * Kennung einem anderen Konto, das im selben Schritt geht (`alt.uid` oder
+     * `weitere["konten/<uid>"] === null` — Neu-Verbinden, Gast-Umzug), zieht
+     * der Index mit; sonst `konflikt` = { id, uid, besitzer }.
+     */
+    async idPfade(eintrag, alt, weitere) {
+        const leer = { pfade: {}, konflikt: null };
+        if (!eintrag || !eintrag.uid || !KONTO._idTauglich(eintrag.id)) {
+            return leer;
+        }
+        const frage = await KONTO.idBesitzer(eintrag.id);
+        if (frage.regel !== true || frage.besitzer === eintrag.uid) {
+            return leer;
+        }
+        const pfade = { ["ids/" + eintrag.id]: eintrag.uid };
+        if (frage.besitzer === null) {
+            return KONTO._idAnlegenErlaubt(eintrag) ? { pfade: pfade, konflikt: null } : leer;
+        }
+        const umzug = (alt && alt.uid === frage.besitzer)
+            || (weitere && weitere["konten/" + frage.besitzer] === null);
+        return umzug ? { pfade: pfade, konflikt: null }
+            : { pfade: {}, konflikt: { id: eintrag.id, uid: eintrag.uid, besitzer: frage.besitzer } };
+    },
+
+    /* Darf diese Sitzung `ids/<eintrag.id>` NEU anlegen? Wie die Regel: die
+       eigene uid als Kennung, oder UP#Plus. */
+    _idAnlegenErlaubt(eintrag) {
+        const ich = KONTO.uid();
+        return !!ich && ((eintrag.id === ich && eintrag.uid === ich) || ich === KONTO.OBER_UID);
+    },
+
+    /* Nur den eigenen Index anlegen (Kennung = eigene uid). Die Regel
+       entscheidet; true = geschrieben. */
+    async _idEintragen(speicher, id, uid) {
+        if (!uid || uid !== KONTO.uid() || id !== uid || !KONTO._idTauglich(id)) {
+            return false;
+        }
+        try {
+            await speicher.teilSchreiben({ ["ids/" + id]: uid });
+            return true;
+        } catch (fehler) {
+            return false;
+        }
+    },
+
+    /* Konflikt merken und melden — nie still. */
+    _idMelden(konflikt) {
+        KONTO.idKonflikt = konflikt;
+        try {
+            console.warn("UPCrew-Konto: Die Spieler-Kennung gehört laut Index einem anderen Konto.", konflikt);
+        } catch (fehler) {
+            /* ohne Konsole: nur der Merker */
+        }
+        if (typeof KONTO.beiIdKonflikt === "function") {
+            try {
+                KONTO.beiIdKonflikt(konflikt);
+            } catch (fehler) {
+                /* die App darf das Laden nicht umwerfen */
+            }
+        }
+    },
+
+    /*
+     * BEIM LADEN (aus `speicher-konten.js`, einmal je Sitzung): steht der
+     * eigene Index? Liefert { stand }: "da", "nachgetragen" (nur Kennung =
+     * uid), "wartet" (ältere Kennung ohne Index: still, kommt über UP#Plus
+     * „§12 nachziehen"), "konflikt" (+ idKonflikt, gemeldet), "ohneRegel",
+     * "netz", "fehler", "ohne" (kein eigener Eintrag / Kennung untauglich).
+     * Wirft nie.
+     */
+    async idSichern(speicher, eintrag) {
+        if (!eintrag || !eintrag.uid || eintrag.uid !== KONTO.uid() || !KONTO._idTauglich(eintrag.id)) {
+            return { stand: "ohne" };
+        }
+        const frage = await KONTO.idBesitzer(eintrag.id);
+        if (frage.regel === false) {
+            return { stand: "ohneRegel" };
+        }
+        if (frage.regel !== true) {
+            return { stand: "netz" };
+        }
+        if (frage.besitzer === eintrag.uid) {
+            KONTO.idKonflikt = null;
+            return { stand: "da" };
+        }
+        if (frage.besitzer === null) {
+            if (eintrag.id !== eintrag.uid) {
+                return { stand: "wartet" };
+            }
+            return { stand: (await KONTO._idEintragen(speicher, eintrag.id, eintrag.uid)) ? "nachgetragen" : "fehler" };
+        }
+        const konflikt = { id: eintrag.id, uid: eintrag.uid, besitzer: frage.besitzer };
+        KONTO._idMelden(konflikt);
+        return { stand: "konflikt", idKonflikt: konflikt };
     },
 
     /* Das Anmeldeverzeichnis eines Namens (lesbar ohne Anmeldung, nur je
@@ -1470,6 +1664,32 @@ const KONTO = {
                 uebersprungen++;
             }
         }
+        /* F2 (seit 17.10.2026): den Index `ids` für alle Konten nachziehen —
+           nur, wenn die Regel ihn kennt (sonst 401: dann wie bisher). Eine
+           Kennung, die mehrere Konten tragen, bleibt liegen und kommt in
+           `doppelt` (das klärt ein Mensch, siehe EINBAU-IDS.md). */
+        const ids = await KONTO._dbRufen("ids");
+        let idsGeschrieben = 0;
+        const doppelt = [];
+        if (ids.ok) {
+            KONTO.idsRegel = true;
+            const istIds = (ids.daten && typeof ids.daten === "object") ? ids.daten : {};
+            const jeId = {};
+            for (const uid of Object.keys(alleKonten).sort()) {
+                const id = alleKonten[uid] && alleKonten[uid].id;
+                if (KONTO._idTauglich(id)) {
+                    jeId[id] = (jeId[id] || []).concat(uid);
+                }
+            }
+            for (const id of Object.keys(jeId).sort()) {
+                if (jeId[id].length > 1) {
+                    doppelt.push({ id: id, uids: jeId[id] });
+                } else if (istIds[id] !== jeId[id][0]) {
+                    pfade["ids/" + id] = jeId[id][0];
+                    idsGeschrieben++;
+                }
+            }
+        }
         const alle = Object.keys(pfade);
         for (let start = 0; start < alle.length; start += KONTO.NACHZIEHEN_JE) {
             const schritt = { geaendertAm: Date.now() };
@@ -1481,7 +1701,8 @@ const KONTO = {
                 return { ok: false, text: ergebnis.text };
             }
         }
-        return { ok: true, geschrieben: geschrieben, uebersprungen: uebersprungen };
+        return { ok: true, geschrieben: geschrieben, uebersprungen: uebersprungen,
+            ids: idsGeschrieben, doppelt: doppelt };
     },
 
     /* ---------------------------------------------------------------- *
@@ -1505,7 +1726,7 @@ const KONTO = {
 
     /* Eintrag + Namens-Platz in EINEM Schritt; der alte Platz geht weg, wenn
        sich Name oder Nummer geändert haben. */
-    _eintragSchreiben(speicher, eintrag, alt, weitere) {
+    async _eintragSchreiben(speicher, eintrag, alt, weitere) {
         const sauber = KONTO._sauber(eintrag);
         const aenderungen = Object.assign({ geaendertAm: Date.now() }, weitere || {});
         aenderungen["konten/" + sauber.uid] = sauber;
@@ -1521,7 +1742,20 @@ const KONTO = {
            Schritt (unter der alten Regel nichts — die kennt die Knoten nicht
            und lehnte den ganzen Schritt ab). */
         Object.assign(aenderungen, KONTO.oeffentlichePfade(sauber, alt));
-        return KONTO._schreiben(speicher, aenderungen, sauber);
+        /* F2: der Index `ids/<id>` im SELBEN Schritt. Gehört die Kennung
+           einem anderen Konto: ohne Index schreiben (Stufe 1 lässt das zu,
+           Stufe 2 lehnt ab) und melden — übernehmen kann nur UP#Plus. */
+        const index = await KONTO.idPfade(sauber, alt, weitere);
+        if (index.konflikt) {
+            KONTO._idMelden(index.konflikt);
+        }
+        Object.assign(aenderungen, index.pfade);
+        const ergebnis = await KONTO._schreiben(speicher, aenderungen, sauber);
+        if (!index.konflikt) {
+            return ergebnis;
+        }
+        return Object.assign({}, ergebnis, { idKonflikt: index.konflikt },
+            ergebnis.ok ? {} : { text: KONTO.ID_KONFLIKT_TEXT });
     },
 
     /*
