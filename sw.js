@@ -10,7 +10,7 @@
  * Anmeldung (googleapis) gehen nie durch den Zwischenspeicher.
  */
 
-const SPEICHER_NAME = "kaffekasse-v0.12.0";
+const SPEICHER_NAME = "kaffekasse-v0.13.0";
 
 const BEIM_BAUEN = (self.location.hostname === "localhost" || self.location.hostname === "127.0.0.1");
 
@@ -40,6 +40,7 @@ const DATEIEN = [
     "js/upcrew-farbwelten.js",
     "js/upcrew-aussehen.js",
     "js/aussehen.js",
+    "js/freigabe.js",
     "js/konfig.js",
     "js/upcrew-platz.js",
     "js/upcrew-anpassen.js",

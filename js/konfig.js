@@ -13,7 +13,33 @@
 
 const KONFIG = {
 
-    APP_VERSION: "0.12.0",
+    APP_VERSION: "0.13.0",
+
+    /*
+     * DER FREIGABE-KANAL (seit 0.13.0, Baustein js\freigabe.js, Einbau: UPCrew
+     * bausteine\EINBAU-FREIGABE.md). Jede sichtbare Neuerung hat hier einen Namen und eine Stufe:
+     *     "alle"   jeder (auch Gast)
+     *     "beta"   nur Konten mit Rolle „beta“ und Admins
+     *     "admin"  nur Admins
+     *     "aus"    gebaut, niemand sieht es (Stand davor)
+     * Bildschirme fragen nur `UPCREW_FREIGABE.darf(name)`. Ein Name, der hier fehlt, heißt „nein“
+     * (ein Regressionstest hält Code und Tabelle gleich).
+     * REGEL FÜR KÜNFTIGE LÄUFE: sichtbar Neues kommt als "beta" (nie direkt "alle"); Freigabe für
+     * alle = hier auf "alle" + Version hochzählen.
+     * Startbelegung 0.13.0: die Neuerungen aus 0.11.0/0.12.0, die heute alle sehen, stehen auf
+     * "alle" — Notfall-Schalter, nichts verschwindet. `beitrittMitCode` unten bleibt ein eigener
+     * Regel-Schalter (hängt an der Datenbank, nicht an der Rolle).
+     */
+    FREIGABEN: {
+        "einkaufsliste": "alle",       /* 0.11.0 Einkaufsliste unter der Kasse (Haken nur am Gerät) */
+        "einkauf-teilen": "alle",      /* 0.12.0 „Teilen“/„Kopieren“ unter der Einkaufsliste */
+        "zuletzt-gekauft": "alle",     /* 0.11.0 „Zuletzt gekauft“ in der Kasse-Karte und je Mitglied */
+        "alte-packung-leer": "alle",   /* 0.12.0 „Öffnen“ fragt „Alte Packung leer?“ */
+        "rueckgaengig": "alle",        /* 0.12.0 „Rückgängig“ nach „Leer“ und „Öffnen“ */
+        "laenger-als-ueblich": "alle", /* 0.12.0 „offen seit n Tagen · länger als üblich“ */
+        "ausgaben-monat": "alle",      /* 0.12.0 Ausgaben je Monat in „Mehr Zahlen“ */
+        "scan-hinweise": "alle"        /* 0.11.0 Schon da, Prüfziffer, „Nochmal“ beim Suchen */
+    },
 
     /* Name und Nummer im Studio-Intro (die Reihe der Nummern führt das Studio). */
     APP_NAME: "Kaffekasse",
@@ -83,6 +109,12 @@ const KONFIG = {
        Das Intro endet spätestens nach rund 9 s (Baustein), also davor. */
     notfallMs: 10000
 };
+
+/* Die Freigabe-Tabelle so früh wie möglich melden (seit 0.13.0): js\freigabe.js lädt in
+   index.html VOR dieser Datei. APP.starten meldet sie noch einmal (Einbau-Anleitung). */
+if (typeof UPCREW_FREIGABE !== "undefined" && UPCREW_FREIGABE && typeof UPCREW_FREIGABE.tabelle === "function") {
+    UPCREW_FREIGABE.tabelle(KONFIG.FREIGABEN);
+}
 
 /* Damit die Regressionstests die Datei außerhalb des Browsers laden können. */
 if (typeof module !== "undefined" && module.exports) {

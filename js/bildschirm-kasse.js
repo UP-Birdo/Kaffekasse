@@ -165,6 +165,9 @@ const KASSE_BLATT = {
     /* „Zuletzt gekauft“ (0.11.0) in der Kasse-Karte: die drei neuesten Packungen, je Zeile
        Person · Produkt · Tag. Ohne Käufe fehlt der Abschnitt. */
     _zuletzt(el, stand) {
+        if (!UPCREW_FREIGABE.darf("zuletzt-gekauft")) {
+            return;
+        }
         const liste = KASSE.zuletztGekauft(stand, 3);
         if (!liste.length) {
             return;
@@ -493,6 +496,8 @@ const KASSE_BLATT = {
         const uid = (typeof KONTO !== "undefined") ? KONTO.uid() : null;
         const jetzt = STEUERUNG.jetzt();
         const letzter = KASSE.letzterJeMitglied(stand);
+        /* Freigabe aus → ohne den letzten Kauf, wie bis 0.10.0 (Freigabe-Kanal 0.13.0). */
+        const zuletztDa = UPCREW_FREIGABE.darf("zuletzt-gekauft");
         const liste = Object.keys(stand.mitglieder)
             .map((id) => Object.assign({ id: id }, stand.mitglieder[id]))
             .sort((a, b) => a.seit - b.seit || a.name.localeCompare(b.name, "de", { sensitivity: "base" }));
@@ -517,7 +522,7 @@ const KASSE_BLATT = {
                     /* Seit 0.11.0 dazu der letzte Kauf („wer hat zuletzt gekauft“). */
                     const l = letzter[m.id];
                     s.textContent = (m.id === stand.erstelltVon ? "Angelegt · " : "Seit ") + KASSE.datumKurz(m.seit, jetzt)
-                        + (l ? " · zuletzt " + l.produktName + " " + KASSE.datumKurz(l.kauf, jetzt) : " · noch kein Kauf");
+                        + (!zuletztDa ? "" : l ?" · zuletzt " + l.produktName + " " + KASSE.datumKurz(l.kauf, jetzt) : " · noch kein Kauf");
                     text.appendChild(b);
                     text.appendChild(s);
                     zeile.appendChild(kreis);
@@ -609,12 +614,15 @@ const KASSE_BLATT = {
                         return;
                     }
                     nummer.feld.value = ean;
-                    const vorhanden = STEUERUNG.stand ? KASSE.produktMitEan(STEUERUNG.stand, ean) : null;
+                    /* Freigabe „scan-hinweise“ aus → wie bis 0.10.0: kein „Schon da“, keine
+                       Prüfziffer, kein „Nochmal“ (Freigabe-Kanal 0.13.0). */
+                    const hinweise = UPCREW_FREIGABE.darf("scan-hinweise");
+                    const vorhanden = (hinweise && STEUERUNG.stand) ? KASSE.produktMitEan(STEUERUNG.stand, ean) : null;
                     if (vorhanden) {
                         KASSE_BLATT._schonDa(vorhanden, melden);
                         return;
                     }
-                    if (!PRODUKTSUCHE.pruefzifferOk(ean)) {
+                    if (hinweise && !PRODUKTSUCHE.pruefzifferOk(ean)) {
                         nummer.fehler.textContent = PRODUKTSUCHE.rueckmeldung({ art: "pruefziffer" }, gescannt === true).text;
                         return;
                     }
@@ -638,7 +646,7 @@ const KASSE_BLATT = {
                     }
                     /* „Nochmal“ räumt die Meldung samt sich selbst weg — erst NACH dem Tipp (Lehre der
                        App: sonst hält das Blatt den Tipp für einen auf den Grund). */
-                    melden(r.text, r.nochmal ? [DIALOG.knopf("Nochmal", "still", () => setTimeout(() => suchen(gescannt), 0))] : []);
+                    melden(r.text, (r.nochmal && hinweise) ? [DIALOG.knopf("Nochmal", "still", () => setTimeout(() => suchen(gescannt), 0))] : []);
                     name.feld.focus();
                 }
 
@@ -646,7 +654,7 @@ const KASSE_BLATT = {
                     name.fehler.textContent = "";
                     /* Auch ohne „Suchen“: gleicher Strichcode wie ein Produkt der Kasse → „Schon da“
                        statt eines zweiten Produkts (Gegenprüfung 0.11.0). */
-                    const gleich = STEUERUNG.stand ? KASSE.produktMitEan(STEUERUNG.stand, PRODUKTSUCHE.eanPruefen(nummer.feld.value)) : null;
+                    const gleich = (STEUERUNG.stand && UPCREW_FREIGABE.darf("scan-hinweise")) ? KASSE.produktMitEan(STEUERUNG.stand, PRODUKTSUCHE.eanPruefen(nummer.feld.value)) : null;
                     if (gleich) {
                         KASSE_BLATT._schonDa(gleich, melden);
                         return;

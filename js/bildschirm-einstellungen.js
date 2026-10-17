@@ -125,8 +125,26 @@ const EINSTELLUNGEN = {
             ]
         };
 
+        /* Beta-Zugang (seit 0.13.0, Freigabe-Kanal): nur für Rolle beta/admin sichtbar — Gast und
+           alle anderen sehen die Zeile nicht. */
+        const rolle = EINSTELLUNGEN.betaRolle();
+        if (rolle) {
+            ueber.zeilen.push({ zeichen: "schild", titel: "Beta-Zugang",
+                unter: rolle === "admin" ? "Als Admin" : "Neues früher",
+                rechts: E.wert("Aktiv") });
+        }
+
         abschnitte.push(ueber);
         E.bauen(ort, "einstellungen", abschnitte, { spiel: KONFIG.APP_NAME });
+    },
+
+    /* Die Rolle aus dem Freigabe-Kanal: "beta" | "admin" | null (Gast, ohne Rolle, ohne Baustein). */
+    betaRolle() {
+        if (typeof UPCREW_FREIGABE === "undefined" || typeof UPCREW_FREIGABE.rolle !== "function") {
+            return null;
+        }
+        const r = UPCREW_FREIGABE.rolle();
+        return (r === "beta" || r === "admin") ? r : null;
     },
 
     /* Wunsch oder Fehler? Zwei Knöpfe auf einer Karte; Esc/Grund schließt ohne Wahl. */

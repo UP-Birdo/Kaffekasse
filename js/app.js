@@ -75,6 +75,7 @@ const APP = {
         });
         /* Die Einstellungen sind seit 0.6.0 ein Blatt: offen → mit der Kasse mitziehen. */
         STEUERUNG.beobachten(() => EINSTELLUNGEN.auffrischen());
+        APP.freigabeEinrichten();
 
         if (typeof UPCREW_OFFLINE !== "undefined") {
             UPCREW_OFFLINE.lauschen();
@@ -127,6 +128,21 @@ const APP = {
         /* Seit 0.9.0 zuerst die eigenen Kassen am Konto: auf neuem Gerät kein Code mehr nötig. */
         APP.kontenLaden().then(() => STEUERUNG.nachsenden()).then(() => STEUERUNG.kassenAbgleichen())
             .then(() => APP.einladungEinloesen()).then((eingeloest) => (eingeloest ? null : STEUERUNG.laden()));
+    },
+
+    /* Der Freigabe-Kanal (seit 0.13.0, Baustein js\freigabe.js): die Tabelle melden (konfig.js tut
+       es schon beim Laden, hier noch einmal laut Einbau-Anleitung); die Rolle setzt der Konto-Kern
+       beim Laden der Konten. Ändert sie sich (Laden, Abmelden, Kontowechsel, Werkstatt `?beta`),
+       zeichnen Seiten und das offene Einstellungen-Blatt neu. */
+    freigabeEinrichten() {
+        if (typeof UPCREW_FREIGABE === "undefined") {
+            return;
+        }
+        UPCREW_FREIGABE.tabelle(KONFIG.FREIGABEN);
+        UPCREW_FREIGABE.beiWechsel(() => {
+            NAVIGATION.alleVeralten();
+            EINSTELLUNGEN.auffrischen();
+        });
     },
 
     /* Die Werkstatt (nur localhost, `?werkstatt`): lädt js\werkstatt.js nach — Attrappe der

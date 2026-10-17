@@ -100,7 +100,7 @@ const STATISTIK = {
                 ]));
                 /* Ausgaben je Monat (0.12.0): die letzten sechs Monate, unabhängig vom Zeitraum
                    oben; Balken am teuersten Monat. Ohne einen einzigen Preis fehlt der Abschnitt. */
-                const monate = KASSE.ausgabenJeMonat(S.stand, S.jetzt(), 6);
+                const monate = UPCREW_FREIGABE.darf("ausgaben-monat") ? KASSE.ausgabenJeMonat(S.stand, S.jetzt(), 6) : [];
                 if (monate.some((m) => m.mitPreis > 0)) {
                     STATISTIK._zwischentitel(el, "Ausgaben je Monat");
                     const karte = document.createElement("div");

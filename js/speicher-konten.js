@@ -229,6 +229,7 @@ class SpeicherKonten extends SpeicherGemeinsam {
             }
             roh = await this._rohLaden(false);
         }
+        this._rolleMelden(roh);
         const daten = this.aufbereiten(SpeicherKonten.alsListe(roh));
         this._merken(daten);
         if (regeln && KONTO.istP12()) {
@@ -247,6 +248,35 @@ class SpeicherKonten extends SpeicherGemeinsam {
             throw SpeicherKonten._fehler("Laden fehlgeschlagen", antwort.status);
         }
         return antwort.json();
+    }
+
+    /*
+     * DIE ROLLE AN DIE FREIGABE (seit 17.10.2026, kern\freigabe.js): `rollen` liegt nach jedem Laden schon vor
+     * (unter §12 mit Konto, unter der alten Regel im ganzen Knoten) — kein eigener Abruf. Admin wie `KONTO.istAdmin`
+     * (UP#Plus zählt mit), sonst der Wert "beta"; Gast und ohne Konto: keine Rolle. Ein Ladefehler kommt hier nicht
+     * an, die Rolle bleibt dann, wie sie war. Ohne den Baustein ändert sich nichts.
+     */
+    _rolleMelden(roh) {
+        const freigabe = (typeof UPCREW_FREIGABE !== "undefined" && UPCREW_FREIGABE
+            && typeof UPCREW_FREIGABE.rolle === "function") ? UPCREW_FREIGABE : null;
+        if (!freigabe) {
+            return;
+        }
+        try {
+            const uid = this.eigeneUid ? this.eigeneUid() : null;
+            const gast = typeof KONTO !== "undefined" && KONTO && KONTO.sitzung && KONTO.sitzung.gast === true;
+            const rollen = (roh && typeof roh === "object" && roh.rollen && typeof roh.rollen === "object")
+                ? roh.rollen : {};
+            let rolle = null;
+            if (uid && !gast) {
+                const admin = (typeof KONTO !== "undefined" && KONTO && typeof KONTO.istAdmin === "function")
+                    ? KONTO.istAdmin(roh, uid) : rollen[uid] === "admin";
+                rolle = admin ? "admin" : (rollen[uid] === "beta" ? "beta" : null);
+            }
+            freigabe.rolle(rolle);
+        } catch (fehler) {
+            /* die Freigabe darf das Laden nie umwerfen */
+        }
     }
 
     static _fehler(text, status) {

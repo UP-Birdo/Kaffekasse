@@ -137,6 +137,9 @@ const START = {
     /* „Teilen“ und „Kopieren“ der offenen Liste (0.12.0, wie der Einladen-Block der Kasse-Karte):
        z. B. an den, der gerade einkaufen geht. Ohne offene Zeile keine Knöpfe. */
     _einkaufTeilen(el, liste, jetzt) {
+        if (!UPCREW_FREIGABE.darf("einkauf-teilen")) {
+            return;
+        }
         const text = BESTAND.einkaufTeilen(liste, jetzt, STEUERUNG.stand ? STEUERUNG.stand.name : "");
         if (!text) {
             return;
@@ -177,6 +180,9 @@ const START = {
      * ---------------------------------------------------------------- */
 
     _einkaufZeile(ort) {
+        if (!UPCREW_FREIGABE.darf("einkaufsliste")) {
+            return;
+        }
         const liste = STEUERUNG.einkauf();
         if (!liste.length) {
             return;
@@ -468,10 +474,13 @@ const START = {
     _zeileOffen(e, jetzt) {
         /* „geöffnet am“ steht seit 0.10.0 nur noch in der Packung (Tipp auf die Zeile). */
         const oben = e.bis ? "bis " + START._tag(e.bis, jetzt) : "offen";
-        /* Ohne „offen haltbar“ seit 0.12.0 „offen seit n Tagen“, länger als üblich markiert. */
-        const unten = e.bis ? BESTAND.restText(e.restTage) : BESTAND.seitText(e);
+        /* Ohne „offen haltbar“ seit 0.12.0 „offen seit n Tagen“, länger als üblich markiert;
+           Freigabe aus → wie bis 0.11.0 „seit Sa 12.10.“ (Freigabe-Kanal 0.13.0). */
+        const laenger = UPCREW_FREIGABE.darf("laenger-als-ueblich");
+        const unten = e.bis ? BESTAND.restText(e.restTage)
+            : (laenger ? BESTAND.seitText(e) : "seit " + START._tag(e.geoeffnetAm, jetzt));
         const z = START._zeile("bk-offen" + (e.restTage !== null && e.restTage <= 0 ? " bk-drueber"
-            : (e.restTage !== null && e.restTage <= 1) || e.laenger ? " bk-knapp" : ""),
+            : (e.restTage !== null && e.restTage <= 1) || (laenger && e.laenger) ? " bk-knapp" : ""),
             "Offen", oben, unten, "Leer",
             () => START._mitRueckgaengig(e, "leer", { leerAm: STEUERUNG.jetzt() }), e.id,
             e.menge > 1 ? " · " + e.menge + " Stk." : "");
@@ -510,7 +519,8 @@ const START = {
        (BESTAND.rueckgaengigFelder, Gegenprüfung Welle 3). */
     async _mitRueckgaengig(e, art, felder) {
         const ergebnis = await STEUERUNG.packungAendern(e.id, felder);
-        if (ergebnis && ergebnis.ok !== false) {
+        /* Freigabe aus → wie bis 0.11.0 ohne die Rückgängig-Zeile (Freigabe-Kanal 0.13.0). */
+        if (ergebnis && ergebnis.ok !== false && UPCREW_FREIGABE.darf("rueckgaengig")) {
             const feld = art === "leer" ? "leerAm" : "geoeffnetAm";
             START.rueck = { produktId: e.produktId, art: art, schritte: [{ id: e.id, feld: feld, wert: felder[feld] }] };
             START._rueckUhrStarten();
@@ -578,7 +588,8 @@ const START = {
        anderes Gerät kann sie inzwischen geleert haben); Fehler beim Leer-Schreiben werden gemeldet. */
     async _oeffnen(e) {
         const ergebnis = await START._mitRueckgaengig(e, "offen", { geoeffnetAm: STEUERUNG.jetzt() });
-        const vorschlag = (ergebnis && ergebnis.ok !== false && STEUERUNG.stand)
+        const vorschlag = (ergebnis && ergebnis.ok !== false && STEUERUNG.stand
+                && UPCREW_FREIGABE.darf("alte-packung-leer"))
             ? BESTAND.alteOffene(STEUERUNG.stand, e.produktId, e.id, STEUERUNG.jetzt()) : null;
         if (!vorschlag) {
             return ergebnis;

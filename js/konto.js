@@ -439,6 +439,7 @@ const KONTO = {
                 && typeof UPCREW_WER_SPIELT.vergessen === "function") {
             UPCREW_WER_SPIELT.vergessen();
         }
+        KONTO._rolleVergessen();
         try {
             window.localStorage.removeItem(KONTO.SCHLUESSEL);
         } catch (fehler) {
@@ -1702,6 +1703,7 @@ const KONTO = {
     },
 
     _sitzungSetzen(kennung, daten, gast) {
+        const vorher = KONTO.sitzung;
         KONTO.sitzung = {
             kennung: String(kennung || ""),
             uid: String(daten.localId || (KONTO.sitzung && KONTO.sitzung.uid) || ""),
@@ -1711,7 +1713,20 @@ const KONTO = {
             ablauf: Date.now() + 1000 * (Number(daten.expiresIn) || 3600),
             gast: gast === true
         };
+        /* Kontowechsel (andere Konto-Nummer oder Gast ↔ Konto): die Rolle des alten gilt nicht mehr; das nächste
+           Laden setzt die neue (kern\speicher-konten.js). Ein Erneuern desselben Kontos lässt sie stehen. */
+        if (!vorher || vorher.uid !== KONTO.sitzung.uid || vorher.gast !== KONTO.sitzung.gast) {
+            KONTO._rolleVergessen();
+        }
         KONTO._schreibenGeraet();
+    },
+
+    /* Die Rolle der Freigabe (kern\freigabe.js, seit 17.10.2026) zurücksetzen — ohne den Baustein nichts. */
+    _rolleVergessen() {
+        if (typeof UPCREW_FREIGABE !== "undefined" && UPCREW_FREIGABE
+                && typeof UPCREW_FREIGABE.rolle === "function") {
+            UPCREW_FREIGABE.rolle(null);
+        }
     },
 
     async _mitZeitlimit(adresse, einstellungen) {
